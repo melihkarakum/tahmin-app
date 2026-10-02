@@ -1,5 +1,26 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+## Project
+
+A social football score-prediction app (Turkish Süper Lig first, friend rooms, national ranking). It is NOT a betting app: no money, prizes, coupons or odds, and those words must not appear in the UI. Read `docs/ARCHITECTURE.md` for decisions and `docs/ROADMAP.md` for the current phase and open items before starting work.
+
+## How to work with the owner
+
+- Work proceeds in phases (FAZ 0–20, see `docs/ROADMAP.md`). Finish one phase, update the roadmap, then ask "FAZ N tamamlandı. FAZ N+1'e geçelim mi?" and wait for approval. Do not add features outside the MVP list.
+- The owner is not an advanced developer and works on Windows + VS Code with an iPhone. Reply in Turkish. Give terminal commands one at a time, full file paths, and explain errors in plain language.
+- Recommend instead of asking "what should we do?". Research instead of assuming on security, money, legal, store policy, API terms and user data.
+- The owner runs git themselves to learn it: after each phase give `git add`, `git commit` (meaningful `feat:` / `fix:` message) and `git push` as commands.
+- Fix a reported bug before building anything new.
+
+## Project rules
+
+- Security lives in the database, never only in the app: predictions are written through a server-side function that checks server time; users cannot write points, matches or rankings.
+- The app only talks to Supabase. The football API key and the Supabase secret key exist only in Edge Functions.
+- Every schema change is a numbered SQL file in `supabase/migrations/`.
+- Colors come from the tokens in `src/global.css`; do not hardcode hex values in screens.
+- NativeWind: never toggle `shadow-*` or `opacity-*` through a conditional `className` (use inline `style`), and never combine `contentContainerClassName` with `contentContainerStyle` on one `ScrollView`.
+- Tab screens stay mounted across logout/login: clear cached server data on sign-out.
+
 ## Expo has changed — do not trust your training data
 
 Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:

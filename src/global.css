@@ -1,9 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Uygulamanın renkleri. Değerler "R G B" biçimindedir. */
 :root {
-  --font-display:
-    Spline Sans, Inter, ui-sans-serif, system-ui, sans-serif, Apple Color Emoji, Segoe UI Emoji,
-    Segoe UI Symbol, Noto Color Emoji;
-  --font-mono:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
-  --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
-  --font-serif: Georgia, 'Times New Roman', serif;
+  --color-background: 247 247 245;
+  --color-surface: 255 255 255;
+  --color-border: 229 229 224;
+  --color-ink: 17 24 21;
+  --color-muted: 107 114 110;
+  --color-primary: 21 128 61;
+  --color-on-primary: 255 255 255;
+  --color-danger: 185 28 28;
 }
