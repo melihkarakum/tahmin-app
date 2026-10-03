@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, Share, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, RefreshControl, Share, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
@@ -72,10 +72,18 @@ export default function RoomScreen() {
     );
   }
 
-  const invite = () => {
-    Share.share({
-      message: `${room.name} tahmin odasına katıl! Uygulamada Odalar → Koda Katıl'a bu kodu gir: ${room.code}`,
-    });
+  const inviteMessage = `${room.name} tahmin odasına katıl! Uygulamada Odalar → Koda Katıl'a bu kodu gir: ${room.code}`;
+
+  // WhatsApp'ın resmi "tıkla ve sohbet et" biçimi: kişi seçilince mesaj hazır gelir.
+  // WhatsApp yoksa telefonun paylaşma penceresi açılır.
+  const inviteWhatsApp = () => {
+    Linking.openURL(`https://wa.me/?text=${encodeURIComponent(inviteMessage)}`).catch(() =>
+      Share.share({ message: inviteMessage }),
+    );
+  };
+
+  const inviteOther = () => {
+    Share.share({ message: inviteMessage });
   };
 
   const showError = (error: unknown) => Alert.alert('İşlem tamamlanamadı', toRoomMessage(error));
@@ -133,9 +141,10 @@ export default function RoomScreen() {
 
       <View className="mt-5 rounded-3xl border border-border bg-surface p-4">
         <Text className="text-[10px] font-bold tracking-widest text-muted">{trUpper('Oda kodu')}</Text>
-        <View className="mt-1 flex-row items-center justify-between">
-          <Text className="text-3xl font-extrabold tracking-[4px] text-ink">{room.code}</Text>
-          <Button label="Davet Et" onPress={invite} />
+        <Text className="mt-1 text-3xl font-extrabold tracking-[4px] text-ink">{room.code}</Text>
+        <View className="mt-3 flex-row gap-2">
+          <Button label="WhatsApp" onPress={inviteWhatsApp} style={{ flex: 1 }} />
+          <Button label="Paylaş" variant="secondary" onPress={inviteOther} style={{ flex: 1 }} />
         </View>
         <Text className="mt-2 text-xs text-muted">
           {"Arkadaşların uygulamada Odalar → Koda Katıl'a bu kodu girerek katılır."}

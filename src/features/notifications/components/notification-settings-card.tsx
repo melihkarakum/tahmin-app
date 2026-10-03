@@ -115,7 +115,7 @@ function SettingRow({
         value={value}
         onValueChange={onChange}
         trackColor={{ false: colors.surfaceMuted, true: colors.primary }}
-        thumbColor="#FFFFFF"
+        thumbColor={colors.ink}
         ios_backgroundColor={colors.surfaceMuted}
         accessibilityLabel={title}
       />
