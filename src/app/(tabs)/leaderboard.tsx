@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Screen } from '@/components/ui/screen';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { Text } from '@/components/ui/text';
 import { tabularNums } from '@/constants/theme';
 import { RankRow } from '@/features/leaderboard/components/rank-row';
 import { formatNumber } from '@/lib/format';

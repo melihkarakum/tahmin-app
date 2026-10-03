@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { Text } from '@/components/ui/text';
 import { tabularNums } from '@/constants/theme';
 import { signOut, toAuthMessage } from '@/features/auth/api';
 import { FormError } from '@/features/auth/components/auth-screen';

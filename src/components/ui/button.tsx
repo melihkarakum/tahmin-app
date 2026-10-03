@@ -1,6 +1,7 @@
-import { type StyleProp, Text, View, type ViewStyle } from 'react-native';
+import { type StyleProp, View, type ViewStyle } from 'react-native';
 
 import { PressableOpacity } from '@/components/ui/pressable-opacity';
+import { Text } from '@/components/ui/text';
 
 type ButtonProps = {
   label: string;
@@ -18,15 +19,12 @@ export function Button({ label, onPress, variant = 'primary', disabled = false, 
       <View
         className={
           isPrimary
-            ? 'h-12 items-center justify-center rounded-xl bg-primary px-5'
-            : 'h-12 items-center justify-center rounded-xl border border-border bg-surface px-5'
+            ? 'h-[52px] items-center justify-center rounded-2xl bg-primary px-5'
+            : 'h-[52px] items-center justify-center rounded-2xl border border-border bg-surface px-5'
         }>
         <Text
-          className={
-            isPrimary
-              ? 'text-base font-semibold text-on-primary'
-              : 'text-base font-semibold text-ink'
-          }>
+          numberOfLines={1}
+          className={isPrimary ? 'text-base font-bold text-on-primary' : 'text-base font-bold text-ink'}>
           {label}
         </Text>
       </View>

@@ -1,15 +1,16 @@
-// Uygulamanın kullandığı veri biçimleri. FAZ 4'te veritabanı tablolarıyla eşlenecek.
+// Ekranların kullandığı veri biçimleri. Veritabanı satırları bunlara çevrilir
+// (bkz. src/features/matches/queries.ts).
 
 export type Team = {
-  id: string;
+  id: number;
   name: string;
   shortName: string;
 };
 
-export type MatchStatus = 'scheduled' | 'live' | 'finished' | 'postponed';
+export type MatchStatus = 'scheduled' | 'live' | 'finished' | 'postponed' | 'cancelled';
 
 export type Match = {
-  id: string;
+  id: number;
   round: number;
   home: Team;
   away: Team;
@@ -17,16 +18,20 @@ export type Match = {
   status: MatchStatus;
   homeScore: number | null;
   awayScore: number | null;
+  /** Geliştirme için eklenmiş deneme maçı (gerçek fikstür değil). */
+  isTest: boolean;
 };
 
 export type ResultType = 'exact' | 'outcome_diff' | 'outcome' | 'miss';
 
 export type Prediction = {
-  matchId: string;
+  matchId: number;
   homeGoals: number;
   awayGoals: number;
   points: number | null;
   resultType: ResultType | null;
+  /** Tahminin en son kaydedildiği an (sunucu saati). */
+  updatedAt: string;
 };
 
 export type LeaderboardRow = {
@@ -50,8 +55,6 @@ export type Room = {
 };
 
 export type ProfileStats = {
-  displayName: string;
-  username: string;
   seasonPoints: number;
   predictionCount: number;
   exactCount: number;

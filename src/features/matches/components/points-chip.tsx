@@ -1,5 +1,6 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
+import { Text } from '@/components/ui/text';
 import { tabularNums } from '@/constants/theme';
 import type { ResultType } from '@/types/domain';
 
@@ -8,14 +9,15 @@ type PointsChipProps = {
   resultType: ResultType;
 };
 
+/** Kazanılan puan. Tam skor altın renkte öne çıkar. */
 export function PointsChip({ points, resultType }: PointsChipProps) {
-  const label = points > 0 ? `+${points} puan` : '0 puan';
+  const label = points > 0 ? `+${points}` : '0';
 
   if (resultType === 'exact') {
     return (
-      <View className="rounded-full bg-primary px-3 py-1">
-        <Text className="text-sm font-bold text-on-primary" style={tabularNums}>
-          {label}
+      <View className="rounded-full bg-gold px-3 py-1">
+        <Text className="text-sm font-black text-background" style={tabularNums}>
+          {label} puan
         </Text>
       </View>
     );
@@ -23,9 +25,9 @@ export function PointsChip({ points, resultType }: PointsChipProps) {
 
   if (resultType === 'miss') {
     return (
-      <View className="rounded-full bg-surface-muted px-3 py-1">
+      <View className="rounded-full bg-surface px-3 py-1">
         <Text className="text-sm font-bold text-muted" style={tabularNums}>
-          {label}
+          {label} puan
         </Text>
       </View>
     );
@@ -33,8 +35,8 @@ export function PointsChip({ points, resultType }: PointsChipProps) {
 
   return (
     <View className="rounded-full bg-primary-soft px-3 py-1">
-      <Text className="text-sm font-bold text-primary" style={tabularNums}>
-        {label}
+      <Text className="text-sm font-black text-primary" style={tabularNums}>
+        {label} puan
       </Text>
     </View>
   );

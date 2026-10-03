@@ -13,9 +13,9 @@ Her faz tamamlanınca onay alınır; onaysız sonraki faza geçilmez.
 | – | Arayüz önizlemesi (örnek veriyle) | Tamamlandı (2026-10-02); ekranlar `src/mocks/data.ts` ile çalışıyor, FAZ 7–12'de gerçek veriye bağlanacak |
 | 4 | Veritabanı | Tamamlandı (2026-10-03): 4 migration yüklendi; 29 yerel test, gerçek projede 12 güvenlik kontrolü ve Supabase güvenlik/performans denetimi temiz |
 | 5 | Giriş ve kayıt | Kod tamam (2026-10-03): kayıt, giriş, çıkış, oturum hatırlama, kullanım koşulu onayı; 32 yerel test + gerçek projede kontrol geçti. Telefonda gerçek kayıt testi bekleniyor |
-| 6 | Futbol API entegrasyonu | |
-| 7 | Maçlar | |
-| 8 | Tahmin sistemi | |
+| 6 | Futbol API entegrasyonu | Tamamlandı (2026-10-03): senkron fonksiyonu ve zamanlayıcı çalışıyor, 2024-25 sezonuyla uçtan uca doğrulandı (19 takım, 342 maç). Güncel sezon için ücretli API planı gerekiyor |
+| 7 | Maçlar | Tamamlandı (2026-10-03): ana sayfa veritabanındaki güncel haftayı gösteriyor; test haftasıyla. Görsel tasarım koyu premium temaya geçti |
+| 8 | Tahmin sistemi | Tamamlandı (2026-10-03, FAZ 7 ile birlikte): tahmin sunucuya kaydediliyor ve güncelleniyor; 47 yerel test + gerçek projede 14 kontrol geçti. Telefonda deneme bekleniyor |
 | 9 | Puanlama | |
 | 10 | Arkadaş odaları | |
 | 11 | Sıralama | |
@@ -53,8 +53,12 @@ Listeye eklenen zorunlular: uygulama içinden hesap silme, kayıtta gizlilik ve 
 
 ## Doğrulanmamış bilgiler
 
-- **API-Football ücretsiz planı:** içinde bulunulan sezonu verip vermediği bilinmiyor; resmi fiyat sayfası okunamadı. FAZ 6'nın ilk adımı gerçek anahtarla denemek. Vermiyorsa 19 $/ay.
-- **Edge Function yükleme:** Supabase CLI ile yüklemenin Docker isteyip istemediği belirsiz. İsterse panel üzerindeki editör kullanılır. (Migration yükleme Docker'sız çalışıyor: `supabase db push`.)
+- **API-Football ücretli plan fiyatı:** resmi fiyat sayfası okunamadı; ikincil kaynaklara göre en ucuz ücretli plan 19 $/ay. Satın almadan önce panelden kontrol edilmeli.
+
+## Doğrulanan bilgiler
+
+- **API-Football ücretsiz planı güncel sezonu vermiyor** (2026-10-03, gerçek anahtarla denendi): "Free plans do not have access to this season, try from 2022 to 2024." Günlük 100 istek. Süper Lig kimliği 203.
+- **Edge Function yükleme Docker'sız çalışıyor:** `--use-api` seçeneğiyle.
 
 ## Bilinen ayarlar
 
@@ -70,6 +74,7 @@ Listeye eklenen zorunlular: uygulama içinden hesap silme, kayıtta gizlilik ve 
 | Şifre sıfırlama (e-posta servisi ve uygulamaya dönen bağlantı gerektirir) | Beta öncesi |
 | Kullanım koşulları ve gizlilik politikası metinleri (kayıt ekranındaki onay kutusu bunlara bağlanacak) | Beta öncesi |
 | Supabase'de en kısa şifre uzunluğunu 8'e çıkarmak (uygulama zaten 8 istiyor) | FAZ 17 |
+| API-Football ücretli plana geçiş (güncel sezon için şart); ardından test maçlarını silmek | Gerçek maçlarla test ya da beta öncesi |
 | Uygulamanın gerçek adı ve mağaza kimliği | FAZ 13 |
 | Apple Developer hesabı (iPhone'da bildirim testi için) | FAZ 13 |
 | Alan adı (davet linki, e-posta göndereni, gizlilik sayfası) | FAZ 14 |

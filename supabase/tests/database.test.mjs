@@ -510,6 +510,112 @@ describe('odalar', () => {
   });
 });
 
+describe('tahmin kaydetme (save_prediction)', () => {
+  const save = (db, userId, matchId, home, away) =>
+    asUser(
+      db,
+      userId,
+      'select id, user_id, home_goals, away_goals, points from public.save_prediction($1, $2, $3)',
+      [matchId, home, away],
+    );
+
+  test('kullanıcı tahmin kaydeder ve maç başlamadan günceller; satır hep kendisine aittir', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const melih = await signUp(db, 'melih');
+    const matchId = await createMatch(db, seed, 60);
+
+    const first = await save(db, melih, matchId, 2, 1);
+    const second = await save(db, melih, matchId, 3, 1);
+
+    assert.equal(first.rows[0].user_id, melih);
+    assert.equal(second.rows[0].id, first.rows[0].id);
+    assert.equal(second.rows[0].home_goals, 3);
+    assert.equal(second.rows[0].points, null);
+    const { rows } = await db.query('select count(*)::int as count from public.predictions');
+    assert.equal(rows[0].count, 1);
+  });
+
+  test('maç başladıktan sonra kaydedemez', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const melih = await signUp(db, 'melih');
+    const started = await createMatch(db, seed, -1);
+
+    await assert.rejects(save(db, melih, started, 1, 0), WINDOW_CLOSED);
+  });
+
+  test('banlı kullanıcı ve giriş yapmamış biri kaydedemez', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const melih = await signUp(db, 'melih');
+    const matchId = await createMatch(db, seed, 60);
+    await db.query('update public.profiles set is_banned = true where id = $1', [melih]);
+
+    await assert.rejects(save(db, melih, matchId, 1, 0), /tahmin yapılamaz/);
+    await assert.rejects(
+      asAnon(db, 'select * from public.save_prediction($1, 1, 0)', [matchId]),
+      PERMISSION_DENIED,
+    );
+  });
+
+  test('geçersiz skor reddedilir', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const melih = await signUp(db, 'melih');
+    const matchId = await createMatch(db, seed, 60);
+
+    await assert.rejects(save(db, melih, matchId, 25, 0), /predictions_goals_range/);
+  });
+});
+
+describe('güncel hafta (current_round)', () => {
+  const currentRound = async (db, userId) =>
+    (await asUser(db, userId, 'select season_name, round from public.current_round()')).rows;
+
+  const matchInRound = async (db, seed, round, minutesFromNow, status = 'scheduled') => {
+    const id = await createMatch(db, seed, minutesFromNow, status);
+    await db.query('update public.matches set round = $1 where id = $2', [round, id]);
+    return id;
+  };
+
+  test('oynanan maç varsa onun haftası, yoksa sıradaki maçın haftası', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const melih = await signUp(db, 'melih');
+    await matchInRound(db, seed, 7, -2000, 'scheduled');
+    await matchInRound(db, seed, 8, 120);
+    await matchInRound(db, seed, 9, 5000);
+
+    assert.deepEqual(await currentRound(db, melih), [{ season_name: '2026-27', round: 8 }]);
+
+    await matchInRound(db, seed, 7, -30, 'live');
+    assert.equal((await currentRound(db, melih))[0].round, 7);
+  });
+
+  test('ertelenen maç haftayı geride bırakmaz; hiç gelecek maç yoksa son hafta', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const melih = await signUp(db, 'melih');
+    await matchInRound(db, seed, 5, 60, 'postponed');
+    const nextId = await matchInRound(db, seed, 9, 120);
+
+    assert.equal((await currentRound(db, melih))[0].round, 9);
+
+    await db.query(
+      "update public.matches set status = 'finished', home_score = 1, away_score = 0, kickoff_at = now() - interval '1 day' where id = $1",
+      [nextId],
+    );
+    assert.equal((await currentRound(db, melih))[0].round, 9);
+  });
+
+  test('güncel sezon yoksa sonuç boş döner', async () => {
+    const db = await createTestDb();
+    const melih = await signUp(db, 'melih');
+    assert.deepEqual(await currentRound(db, melih), []);
+  });
+});
+
 describe('puan ayarları', () => {
   test('varsayılan değerler 5/3/1 ve tabloda tek satır olabilir', async () => {
     const db = await createTestDb();

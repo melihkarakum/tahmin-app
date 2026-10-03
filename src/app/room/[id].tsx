@@ -1,10 +1,11 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Share, Text, View } from 'react-native';
+import { Share, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { Text } from '@/components/ui/text';
 import { RankRow } from '@/features/leaderboard/components/rank-row';
 import { getRoomLeaderboard, rooms } from '@/mocks/data';
 import type { LeaderboardScope } from '@/types/domain';

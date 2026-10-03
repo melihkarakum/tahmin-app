@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
-import { Alert, Text, View } from 'react-native';
+import { Alert, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { PressableOpacity } from '@/components/ui/pressable-opacity';
 import { Screen } from '@/components/ui/screen';
+import { Text } from '@/components/ui/text';
 import { colors, tabularNums } from '@/constants/theme';
 import { rooms } from '@/mocks/data';
 

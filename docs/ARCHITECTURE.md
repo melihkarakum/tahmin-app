@@ -99,6 +99,28 @@ Uygulamanın bilmesi gerekenler:
 - Tahmin, puan, maç, oda oluşturma ve odaya katılma için uygulamanın doğrudan yazma izni yoktur; bunlar sunucu fonksiyonlarıyla yapılır.
 - Tahmin kilidi tabloya bağlı bir tetikleyicidir: tahmin hangi yoldan yazılırsa yazılsın, maç başladıysa (sunucu saatine göre) reddedilir.
 
+## Maç verisi (FAZ 6)
+
+- Kaynak: API-Football v3, Süper Lig lig kimliği **203**. Sezon, başlangıç yılıyla anılır (2026 = 2026-27).
+- `supabase/functions/sync-matches`: `?mode=full` tüm fikstür ve takımlar, `?mode=live` yalnızca başlamak üzere olan ya da oynanan maçlar, `?mode=probe` hesap ve sezon erişimi kontrolü. `?mode=full&season=2024` geçmiş bir sezonu "güncel" işaretlemeden çeker.
+- Dönüşüm kuralları `supabase/functions/_shared/api-football.ts` içinde ve `npm run test:db` ile test edilir: biten maçta normal süre skoru; bitti denip skoru gelmeyen maç "oynanıyor" sayılır; ertelenen `postponed`, iptal/terk/hükmen `cancelled`.
+- Zamanlama (`pg_cron`): `sync-matches-full` her gün 03:15 UTC, `sync-matches-live` 10 dakikada bir. Canlı kontrol, oynanacak maç yoksa futbol API'sini hiç çağırmaz.
+- Fonksiyon yalnızca `x-sync-secret` başlığıyla çağrılabilir. Parola iki yerde durur: Edge Function sırrı `SYNC_SECRET` ve Vault kaydı `sync_secret`. Vault'ta ayrıca `project_url` vardır. Bunlar migration'da değil, bir kez elle oluşturulmuştur. Yeni bir ortamda: `supabase secrets set SYNC_SECRET=...` ve `select vault.create_secret('<değer>', 'sync_secret')`, `select vault.create_secret('https://<ref>.supabase.co', 'project_url')`.
+- Futbol API anahtarı yalnızca Edge Function sırrı `API_FOOTBALL_KEY` olarak durur.
+- Fonksiyon yükleme Docker'sız: `supabase functions deploy sync-matches --use-api --no-verify-jwt`.
+
+## Tahmin ve hafta (FAZ 7-8)
+
+- `current_round()`: güncel sezon ve hafta. Oynanan maç varsa onun haftası, yoksa sıradaki maçın haftası, o da yoksa son hafta; ertelenen maçlar sayılmaz.
+- `save_prediction(maç, ev, deplasman)`: uygulamanın tahmin yazabildiği tek yol. Kimlik oturumdan alınır, banlı hesap reddedilir, maç başladıysa kilit tetikleyicisi reddeder.
+- **Test haftası:** ücretli API planı alınana kadar `supabase/seed/test-round.sql` 9 deneme maçı ekler (`provider = 'test'`, uygulamada "TEST" etiketiyle görünür). Tekrar çalıştırılabilir; maç saatleri çalıştırıldığı ana göre yeniden kurulur. **Gerçek veriye geçmeden önce silinmeli** (komut dosyanın başında).
+
+## Supabase güvenlik denetiminde bilinçli kabul edilen uyarılar
+
+- `is_username_available`: giriş yapmamış kullanıcı da çağırabilir; kayıt ekranının kullanıcı adı kontrolü için. Yalnızca evet/hayır döner.
+- `save_prediction`: giriş yapan kullanıcı çağırabilir; tahmin yazmanın tek yolu budur.
+- Sızdırılmış şifre kontrolü (HaveIBeenPwned) kapalı: FAZ 17'de değerlendirilecek.
+
 ## Veritabanı testleri
 
 `npm run test:db` komutu, migration dosyalarını bilgisayarda çalışan geçici bir Postgres'e (PGlite) kurar ve güvenlik kurallarını dener. Docker gerekmez. Supabase'e özgü roller ve `auth.uid()` için `supabase/tests/supabase-shim.sql` kullanılır; bu dosya yalnızca testler içindir, Supabase'e yüklenmez. Testler gerçek Supabase'in yerini tutmaz; her migration ayrıca gerçek projede de denenir.
@@ -135,9 +157,19 @@ tahmin-app/
 
 Yalnızca ekran ve `_layout` dosyaları `src/app/` içinde durur; geri kalan kod `src/` altındaki diğer klasörlerdedir.
 
+## Tasarım
+
+- **Koyu "stadyum gecesi" teması** (FotMob, Maçkolik, Apple Sports çizgisi): neredeyse siyah zemin, koyu kartlar, canlı yeşil vurgu, tam skor için altın, canlı maç için kırmızı.
+- **Takım rozetleri:** logo yerine kulüp renklerinde yuvarlak rozet ve kısa ad (`src/constants/team-colors.ts`). Logo kullanım hakkı netleşene kadar böyle kalır.
+- **Maç kartı skorbord düzeninde:** ev sahibi solda, deplasman sağda, ortada saat ya da skor; tahmin düğmeleri her takımın altında.
+- **Tasarım vitrini:** `/dev-gallery` adresi kartların tüm durumlarını örnek veriyle gösterir; giriş gerektirmez ve yalnızca geliştirme modunda açılır.
+- **Yazı tipi: Plus Jakarta Sans** (400, 500, 600, 700, 800). Rakamları eşit genişlikte olduğu için skorlar hizalı durur. Yazı tipleri uygulama açılırken yüklenir; yüklenene kadar açılış ekranı kalır. Kalınlık `font-bold` gibi sınıflarla seçilir; bu sınıflar doğrudan ilgili yazı tipi dosyasına bağlıdır (`tailwind.config.js`). Tüm metinler `src/components/ui/text.tsx` üzerinden geçer.
+- En dar desteklenen ekran 375 px (iPhone SE); düzenler 360 px'te de taşmadan çalışır.
+
 ## Stil kuralları
 
 - Renkler `src/global.css` içindeki değişkenlerde tanımlıdır; ekranlarda `bg-surface`, `text-ink` gibi adlarla kullanılır, renk kodu yazılmaz.
+- Büyük harfli etiketler `uppercase` sınıfıyla değil `trUpper()` ile yazılır (`src/lib/text.ts`); aksi halde "Tahmin" → "TAHMIN" olur.
 - Gölge ve opaklık koşullu `className` ile değiştirilmez; inline `style` ile verilir.
 - Aynı `ScrollView` üzerinde `contentContainerClassName` ile `contentContainerStyle` birlikte kullanılmaz.
 

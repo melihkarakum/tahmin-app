@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react';
-import { ScrollView, View } from 'react-native';
+import type { ReactElement, ReactNode } from 'react';
+import { type RefreshControlProps, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type ScreenProps = {
@@ -8,14 +8,19 @@ type ScreenProps = {
   footer?: ReactNode;
   /** Üstte başlık çubuğu olan ekranlarda false verilir. */
   topInset?: boolean;
+  /** Aşağı çekip yenileme. */
+  refreshControl?: ReactElement<RefreshControlProps>;
 };
 
-export function Screen({ children, footer, topInset = true }: ScreenProps) {
+export function Screen({ children, footer, topInset = true, refreshControl }: ScreenProps) {
   const insets = useSafeAreaInsets();
 
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: topInset ? insets.top : 0 }}>
-      <ScrollView contentContainerClassName="px-5 pb-10 pt-3" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerClassName="px-5 pb-10 pt-3"
+        showsVerticalScrollIndicator={false}
+        refreshControl={refreshControl}>
         {children}
       </ScrollView>
       {footer}

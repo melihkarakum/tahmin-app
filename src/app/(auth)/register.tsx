@@ -1,9 +1,9 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Text } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Text } from '@/components/ui/text';
 import { TextField } from '@/components/ui/text-field';
 import {
   isUsernameAvailable,

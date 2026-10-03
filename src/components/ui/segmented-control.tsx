@@ -1,6 +1,7 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { PressableOpacity } from '@/components/ui/pressable-opacity';
+import { Text } from '@/components/ui/text';
 
 type Option<T extends string> = {
   value: T;

@@ -1,7 +1,8 @@
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
 import { PressableOpacity } from '@/components/ui/pressable-opacity';
+import { Text } from '@/components/ui/text';
 import { colors, tabularNums } from '@/constants/theme';
 
 const MAX_GOALS = 20;
@@ -19,24 +20,24 @@ export function ScoreStepper({ value, onChange, teamName }: ScoreStepperProps) {
       <PressableOpacity
         onPress={() => onChange(Math.max(0, value - 1))}
         disabled={value === 0}
-        hitSlop={4}
+        hitSlop={6}
         accessibilityLabel={`${teamName} golünü azalt`}>
-        <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-muted">
-          <Icon name="minus" size={16} color={colors.ink} />
+        <View className="h-9 w-9 items-center justify-center rounded-full border border-border bg-surface">
+          <Icon name="minus" size={14} color={colors.ink} />
         </View>
       </PressableOpacity>
 
-      <Text className="w-11 text-center text-2xl font-bold text-ink" style={tabularNums}>
+      <Text className="w-10 text-center text-3xl font-black text-ink" style={tabularNums}>
         {value}
       </Text>
 
       <PressableOpacity
         onPress={() => onChange(Math.min(MAX_GOALS, value + 1))}
         disabled={value === MAX_GOALS}
-        hitSlop={4}
+        hitSlop={6}
         accessibilityLabel={`${teamName} golünü artır`}>
-        <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-muted">
-          <Icon name="plus" size={16} color={colors.ink} />
+        <View className="h-9 w-9 items-center justify-center rounded-full border border-border bg-surface">
+          <Icon name="plus" size={14} color={colors.ink} />
         </View>
       </PressableOpacity>
     </View>

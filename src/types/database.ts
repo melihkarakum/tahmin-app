@@ -388,7 +388,35 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_round: {
+        Args: never
+        Returns: {
+          round: number
+          season_id: number
+          season_name: string
+        }[]
+      }
       is_username_available: { Args: { candidate: string }; Returns: boolean }
+      save_prediction: {
+        Args: { p_away_goals: number; p_home_goals: number; p_match_id: number }
+        Returns: {
+          away_goals: number
+          created_at: string
+          home_goals: number
+          id: number
+          match_id: number
+          points: number | null
+          result_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "predictions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       [_ in never]: never

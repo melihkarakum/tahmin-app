@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Icon } from '@/components/ui/icon';
+import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 
 type AuthScreenProps = {
@@ -22,7 +24,10 @@ export function AuthScreen({ title, subtitle, children }: AuthScreenProps) {
         keyboardShouldPersistTaps="handled"
         contentContainerClassName="flex-grow justify-center px-6 py-10">
         <View style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
-          <Text className="text-3xl font-bold text-ink">{title}</Text>
+          <View className="mb-6 h-14 w-14 items-center justify-center rounded-2xl border border-border bg-primary-soft">
+            <Icon name="ball" size={28} color={colors.primary} />
+          </View>
+          <Text className="text-3xl font-black text-ink">{title}</Text>
           <Text className="mt-2 text-base text-muted">{subtitle}</Text>
           <View className="mt-8 gap-4">{children}</View>
         </View>

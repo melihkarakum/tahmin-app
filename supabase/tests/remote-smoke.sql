@@ -13,6 +13,7 @@ declare
   v_away bigint;
   v_match bigint;
   v_past_match bigint;
+  v_future_match bigint;
   v_room uuid;
   v_count int;
   passed text[] := '{}';
@@ -173,6 +174,43 @@ begin
     failed := failed || 'girişsiz okuma reddi'::text;
   exception when insufficient_privilege then
     passed := passed || 'girişsiz okuma reddi'::text;
+  end;
+
+  -- 10) save_prediction: kendi adına kaydeder ve günceller --------------------------------
+  insert into public.matches (season_id, round, home_team_id, away_team_id, kickoff_at, provider, provider_id)
+    values (v_season, 1, v_home, v_away, now() + interval '2 hours', 'smoke', 'm3')
+    returning id into v_future_match;
+  begin
+    set local role authenticated;
+    perform set_config('request.jwt.claims', json_build_object('sub', melih, 'role', 'authenticated')::text, true);
+    perform public.save_prediction(v_future_match, 2, 1);
+    perform public.save_prediction(v_future_match, 3, 1);
+    reset role;
+    select count(*) into v_count
+    from public.predictions
+    where user_id = melih and match_id = v_future_match and home_goals = 3;
+    if v_count = 1 then
+      passed := passed || 'tahmin kaydetme ve güncelleme'::text;
+    else
+      failed := failed || 'tahmin kaydetme ve güncelleme'::text;
+    end if;
+  exception when others then
+    failed := failed || ('tahmin kaydetme ve güncelleme: ' || sqlerrm);
+  end;
+
+  -- 11) save_prediction: başlamış maça kaydedemez ----------------------------------------
+  begin
+    set local role authenticated;
+    perform set_config('request.jwt.claims', json_build_object('sub', melih, 'role', 'authenticated')::text, true);
+    perform public.save_prediction(v_past_match, 1, 0);
+    reset role;
+    failed := failed || 'başlamış maça kaydetme reddi'::text;
+  exception when others then
+    if sqlerrm like '%tahmin süresi doldu%' then
+      passed := passed || 'başlamış maça kaydetme reddi'::text;
+    else
+      failed := failed || ('başlamış maça kaydetme reddi: ' || sqlerrm);
+    end if;
   end;
 
   raise exception 'SMOKE geçen=% kalan=% | geçenler: % | kalanlar: %',

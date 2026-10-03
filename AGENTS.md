@@ -17,7 +17,12 @@ A social football score-prediction app (Turkish Süper Lig first, friend rooms, 
 - Security lives in the database, never only in the app: predictions are written through a server-side function that checks server time; users cannot write points, matches or rankings.
 - The app only talks to Supabase. The football API key and the Supabase secret key exist only in Edge Functions.
 - Every schema change is a numbered SQL file in `supabase/migrations/`.
-- Colors come from the tokens in `src/global.css`; do not hardcode hex values in screens.
+- Colors come from the tokens in `src/global.css` (mirrored in `src/constants/theme.ts`); do not hardcode hex values in screens.
+- Uppercase labels: never use the `uppercase` class; wrap the text with `trUpper()` from `src/lib/text.ts` (Turkish İ/I).
+- Text: always import `Text` from `@/components/ui/text` (applies the Plus Jakarta Sans font), never from `react-native`. Weight classes (`font-medium` … `font-black`) select the font file; never set `fontWeight` in styles, use `fonts.*` from `src/constants/fonts.ts` where className can't be used.
+- TextInput: no `lineHeight` (no `text-base`-style classes that set it) — it shifts and clips text on iOS; size comes from `fontSize` only.
+- Layouts must fit a 375 px wide phone (smallest supported iPhone); check `/dev-gallery` at 375 and 360 px.
+- Check visual changes on `/dev-gallery` (dev-only, no login needed) before asking the owner to look on the phone.
 - NativeWind: never toggle `shadow-*` or `opacity-*` through a conditional `className` (use inline `style`), and never combine `contentContainerClassName` with `contentContainerStyle` on one `ScrollView`.
 - Tab screens stay mounted across logout/login: clear cached server data on sign-out.
 

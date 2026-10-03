@@ -1,16 +1,25 @@
 import '@/global.css';
 
+// Her kalınlık ayrı dosyadan alınır; paketin tamamı (italikler dahil 14 dosya) uygulamaya girmesin.
+import { PlusJakartaSans_400Regular } from '@expo-google-fonts/plus-jakarta-sans/400Regular';
+import { PlusJakartaSans_500Medium } from '@expo-google-fonts/plus-jakarta-sans/500Medium';
+import { PlusJakartaSans_600SemiBold } from '@expo-google-fonts/plus-jakarta-sans/600SemiBold';
+import { PlusJakartaSans_700Bold } from '@expo-google-fonts/plus-jakarta-sans/700Bold';
+import { PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sans/800ExtraBold';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { fonts } from '@/constants/fonts';
 import { colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { queryClient } from '@/lib/query-client';
 
-// Kayıtlı oturum okunana kadar açılış ekranı açık kalır; böylece giriş ekranı bir an görünüp kaybolmaz.
+// Yazı tipleri yüklenip kayıtlı oturum okunana kadar açılış ekranı açık kalır;
+// böylece ne sistem yazı tipi bir an görünür ne de giriş ekranı bir an görünüp kaybolur.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -25,17 +34,26 @@ export default function RootLayout() {
 
 function RootNavigator() {
   const { session, isLoading } = useAuth();
+  const [fontsLoaded, fontError] = useFonts({
+    [fonts.regular]: PlusJakartaSans_400Regular,
+    [fonts.medium]: PlusJakartaSans_500Medium,
+    [fonts.semibold]: PlusJakartaSans_600SemiBold,
+    [fonts.bold]: PlusJakartaSans_700Bold,
+    [fonts.extrabold]: PlusJakartaSans_800ExtraBold,
+  });
+  // Yazı tipi yüklenemezse uygulama sistem yazı tipiyle açılır, takılı kalmaz.
+  const isReady = !isLoading && (fontsLoaded || fontError !== null);
   const isSignedIn = session !== null;
 
   useEffect(() => {
-    if (!isLoading) SplashScreen.hide();
-  }, [isLoading]);
+    if (isReady) SplashScreen.hide();
+  }, [isReady]);
 
-  if (isLoading) return null;
+  if (!isReady) return null;
 
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -52,6 +70,7 @@ function RootNavigator() {
               headerShadowVisible: false,
               headerStyle: { backgroundColor: colors.background },
               headerTintColor: colors.ink,
+              headerTitleStyle: { fontFamily: fonts.bold },
             }}
           />
         </Stack.Protected>

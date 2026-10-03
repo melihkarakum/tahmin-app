@@ -11,6 +11,17 @@ export function formatKickoff(iso: string): string {
   return `${weekdayFormatter.format(date)} ${dayMonthFormatter.format(date)} · ${timeFormatter.format(date)}`;
 }
 
+/** Örnek: "Cmt 3 Eki" */
+export function formatDay(iso: string): string {
+  const date = new Date(iso);
+  return `${weekdayFormatter.format(date)} ${dayMonthFormatter.format(date)}`;
+}
+
+/** Örnek: "19:00" */
+export function formatTime(iso: string): string {
+  return timeFormatter.format(new Date(iso));
+}
+
 /** Örnek: 1842 -> "1.842" */
 export function formatNumber(value: number): string {
   return numberFormatter.format(value);

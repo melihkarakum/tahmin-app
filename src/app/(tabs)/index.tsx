@@ -1,82 +1,104 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, View } from 'react-native';
 
+import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { PressableOpacity } from '@/components/ui/pressable-opacity';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { Text } from '@/components/ui/text';
 import { colors, tabularNums } from '@/constants/theme';
 import { RankRow } from '@/features/leaderboard/components/rank-row';
 import { MatchCard } from '@/features/matches/components/match-card';
+import { WeekSummaryCard } from '@/features/matches/components/week-summary-card';
 import { sortMatchesForHome } from '@/features/matches/phase';
+import { useCurrentRound, useMyPredictions, useRoundMatches } from '@/features/matches/queries';
 import { useMyProfile } from '@/features/profile/use-my-profile';
 import { useNow } from '@/hooks/use-now';
 import { formatNumber } from '@/lib/format';
-import {
-  currentRound,
-  getNationalLeaderboard,
-  getRoomLeaderboard,
-  initialPredictions,
-  matches,
-  rooms,
-} from '@/mocks/data';
-import type { Prediction } from '@/types/domain';
+import { trUpper } from '@/lib/text';
+import { getNationalLeaderboard, getRoomLeaderboard, rooms } from '@/mocks/data';
 
 export default function HomeScreen() {
   const router = useRouter();
   const now = useNow();
+  const [refreshing, setRefreshing] = useState(false);
+
   const { data: profile } = useMyProfile();
-  const [predictions, setPredictions] = useState<Prediction[]>(initialPredictions);
+  const roundQuery = useCurrentRound();
+  const current = roundQuery.data ?? undefined;
+  const matchesQuery = useRoundMatches(current?.seasonId, current?.round);
+  const matches = matchesQuery.data ?? [];
+  const predictionsQuery = useMyPredictions(matches.map((match) => match.id));
+  const predictions = predictionsQuery.data ?? [];
+
+  const isLoading =
+    roundQuery.isLoading ||
+    matchesQuery.isLoading ||
+    (matches.length > 0 && predictionsQuery.isLoading);
+  const loadError = roundQuery.error ?? matchesQuery.error ?? predictionsQuery.error;
 
   const predictionByMatch = new Map(predictions.map((p) => [p.matchId, p]));
   const weekPoints = predictions.reduce((sum, p) => sum + (p.points ?? 0), 0);
-  const sortedMatches = sortMatchesForHome(matches, now);
 
   const friendsRoom = rooms[0];
   const friendsRows = getRoomLeaderboard('week');
-  const myRoomRank = friendsRows.find((row) => row.isMe)?.rank;
   const nationalRank = getNationalLeaderboard('season').me.rank;
 
-  const savePrediction = (matchId: string, homeGoals: number, awayGoals: number) => {
-    setPredictions((previous) => [
-      ...previous.filter((p) => p.matchId !== matchId),
-      { matchId, homeGoals, awayGoals, points: null, resultType: null },
-    ]);
+  const refresh = async () => {
+    setRefreshing(true);
+    await Promise.all([roundQuery.refetch(), matchesQuery.refetch(), predictionsQuery.refetch()]);
+    setRefreshing(false);
   };
 
   return (
-    <Screen>
-      <View className="flex-row items-start justify-between">
-        <View>
-          <Text className="text-3xl font-bold text-ink">
-            Merhaba{profile ? ` ${profile.display_name}` : ''} 👋
-          </Text>
-          <Text className="mt-1 text-sm text-muted">Süper Lig · {currentRound}. Hafta</Text>
-        </View>
-        <View className="mt-2 rounded-full border border-border px-2.5 py-1">
-          <Text className="text-xs font-medium text-muted">Örnek veri</Text>
-        </View>
-      </View>
+    <Screen
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />
+      }>
+      <Text className="text-sm font-semibold text-muted">
+        {current ? `Süper Lig · ${current.round}. Hafta` : 'Süper Lig'}
+      </Text>
+      <Text className="mt-1 text-3xl font-black text-ink">
+        Merhaba{profile ? ` ${profile.display_name}` : ''} 👋
+      </Text>
 
-      <View className="mt-5 flex-row rounded-2xl bg-ink p-5">
-        <HeroStat label="Haftalık sıran" value={myRoomRank ? `#${myRoomRank}` : '–'} />
-        <HeroStat label="Puan" value={String(weekPoints)} />
-        <HeroStat label="Tahmin" value={`${predictions.length}/${matches.length}`} />
+      <View className="mt-5">
+        <WeekSummaryCard
+          points={weekPoints}
+          predicted={predictions.length}
+          total={matches.length}
+        />
       </View>
 
       <SectionTitle title="Bu Haftanın Maçları" />
-      <View className="gap-3">
-        {sortedMatches.map((match) => (
-          <MatchCard
-            key={match.id}
-            match={match}
-            prediction={predictionByMatch.get(match.id)}
-            now={now}
-            onSave={savePrediction}
-          />
-        ))}
-      </View>
+      {isLoading ? (
+        <View className="items-center py-10">
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      ) : loadError ? (
+        <View className="items-center gap-3 rounded-3xl border border-border bg-surface p-6">
+          <Text className="text-center text-sm text-muted">Maçlar yüklenemedi.</Text>
+          <Button label="Tekrar dene" variant="secondary" onPress={refresh} />
+        </View>
+      ) : matches.length === 0 ? (
+        <View className="items-center gap-2 rounded-3xl border border-border bg-surface p-6">
+          <Icon name="ball" size={28} color={colors.muted} />
+          <Text className="text-center text-sm text-muted">Bu hafta için henüz maç yok.</Text>
+        </View>
+      ) : (
+        <View className="gap-3">
+          {sortMatchesForHome(matches, now).map((match) => (
+            <MatchCard
+              key={match.id}
+              match={match}
+              prediction={predictionByMatch.get(match.id)}
+              now={now}
+            />
+          ))}
+        </View>
+      )}
 
       <SectionTitle
         title="Arkadaşların"
@@ -85,10 +107,13 @@ export default function HomeScreen() {
           router.push({ pathname: '/room/[id]', params: { id: friendsRoom.id } })
         }
       />
-      <View className="overflow-hidden rounded-2xl border border-border bg-surface">
-        <View className="border-b border-border px-4 py-3">
-          <Text className="text-sm font-semibold text-ink">{friendsRoom.name}</Text>
-          <Text className="text-xs text-muted">Bu haftanın sıralaması</Text>
+      <View className="overflow-hidden rounded-3xl border border-border bg-surface">
+        <View className="flex-row items-center justify-between border-b border-border px-4 py-3">
+          <View>
+            <Text className="text-sm font-bold text-ink">{friendsRoom.name}</Text>
+            <Text className="text-xs text-muted">Bu haftanın sıralaması</Text>
+          </View>
+          <SampleTag />
         </View>
         {friendsRows.slice(0, 3).map((row, index) => (
           <RankRow key={row.userId} row={row} isLast={index === 2} />
@@ -97,10 +122,13 @@ export default function HomeScreen() {
 
       <SectionTitle title="Türkiye Sıralaması" />
       <PressableOpacity onPress={() => router.push('/leaderboard')}>
-        <View className="flex-row items-center justify-between rounded-2xl border border-border bg-surface p-4">
+        <View className="flex-row items-center justify-between rounded-3xl border border-border bg-surface p-4">
           <View>
-            <Text className="text-xs text-muted">Sezon sıran</Text>
-            <Text className="mt-0.5 text-2xl font-bold text-ink" style={tabularNums}>
+            <View className="flex-row items-center gap-2">
+              <Text className="text-xs text-muted">Sezon sıran</Text>
+              <SampleTag />
+            </View>
+            <Text className="mt-0.5 text-2xl font-black text-ink" style={tabularNums}>
               #{formatNumber(nationalRank)}
             </Text>
           </View>
@@ -111,13 +139,11 @@ export default function HomeScreen() {
   );
 }
 
-function HeroStat({ label, value }: { label: string; value: string }) {
+/** Henüz gerçek veriye bağlanmamış bölümleri işaretler. */
+function SampleTag() {
   return (
-    <View className="flex-1">
-      <Text className="text-xs font-medium text-surface/60">{label}</Text>
-      <Text className="mt-1 text-3xl font-bold text-surface" style={tabularNums}>
-        {value}
-      </Text>
+    <View className="rounded-full border border-border px-2 py-0.5">
+      <Text className="text-[10px] font-bold tracking-wider text-muted">{trUpper('Örnek')}</Text>
     </View>
   );
 }
