@@ -18,6 +18,9 @@ export const colors = {
 // Ana sayfadaki özet kartının arka planı: koyu yeşilden yüzey rengine.
 export const heroGradient = ['#14462B', '#151A1F'] as const;
 
+// Alttan açılan panellerin arkasındaki karartma.
+export const overlayColor = 'rgba(0, 0, 0, 0.65)';
+
 // Sıralamada ilk üç.
 export const medalColors = {
   1: '#F5B700',

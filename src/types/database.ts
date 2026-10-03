@@ -388,6 +388,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_points: {
+        Args: {
+          p_away_score: number
+          p_exact_points?: number
+          p_goal_diff_bonus?: number
+          p_home_score: number
+          p_outcome_points?: number
+          p_predicted_away: number
+          p_predicted_home: number
+        }
+        Returns: {
+          points: number
+          result_type: string
+        }[]
+      }
       current_round: {
         Args: never
         Returns: {
@@ -417,6 +432,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      score_match: { Args: { p_match_id: number }; Returns: number }
     }
     Enums: {
       [_ in never]: never

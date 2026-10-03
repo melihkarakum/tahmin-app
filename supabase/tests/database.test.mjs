@@ -616,6 +616,168 @@ describe('güncel hafta (current_round)', () => {
   });
 });
 
+describe('puan hesabı (calculate_points)', () => {
+  const cases = [
+    // [tahmin ev, tahmin dep, gerçek ev, gerçek dep, puan, sonuç] — örnekler PRD'den
+    [2, 1, 2, 1, 5, 'exact'],
+    [3, 2, 2, 1, 4, 'outcome_diff'],
+    [3, 1, 2, 1, 3, 'outcome'],
+    [1, 1, 2, 1, 0, 'miss'],
+    [0, 2, 2, 1, 0, 'miss'],
+    [1, 1, 2, 2, 4, 'outcome_diff'],
+    [0, 0, 0, 0, 5, 'exact'],
+    [0, 1, 1, 3, 3, 'outcome'],
+    [1, 3, 0, 2, 4, 'outcome_diff'],
+    [2, 0, 0, 0, 0, 'miss'],
+  ];
+
+  test('tüm örneklerde doğru puan ve sonuç türü', async () => {
+    const db = await createTestDb();
+    for (const [ph, pa, h, a, points, resultType] of cases) {
+      const { rows } = await db.query(
+        'select points, result_type from public.calculate_points($1, $2, $3, $4)',
+        [ph, pa, h, a],
+      );
+      assert.deepEqual(rows[0], { points, result_type: resultType }, `${ph}-${pa} / ${h}-${a}`);
+    }
+  });
+
+  test('puan değerleri ayardan gelir', async () => {
+    const db = await createTestDb();
+    const { rows } = await db.query(
+      'select points from public.calculate_points(2, 1, 2, 1, 10, 4, 2) union all select points from public.calculate_points(3, 2, 2, 1, 10, 4, 2)',
+    );
+    assert.deepEqual(
+      rows.map((row) => row.points),
+      [10, 6],
+    );
+  });
+});
+
+describe('otomatik puanlama', () => {
+  const finish = (db, matchId, home, away) =>
+    db.query(
+      "update public.matches set kickoff_at = now() - interval '2 hours', status = 'finished', home_score = $2, away_score = $3 where id = $1",
+      [matchId, home, away],
+    );
+
+  const pointsOf = async (db, matchId) =>
+    (
+      await db.query(
+        'select u.username, p.points, p.result_type from public.predictions p join public.profiles u on u.id = p.user_id where p.match_id = $1 order by u.username',
+        [matchId],
+      )
+    ).rows;
+
+  test('maç bitince tüm tahminler puanlanır', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const ali = await signUp(db, 'ali');
+    const burak = await signUp(db, 'burak');
+    const can = await signUp(db, 'can');
+    const matchId = await createMatch(db, seed, 60);
+    await insertPrediction(db, ali, matchId, 2, 1);
+    await insertPrediction(db, burak, matchId, 3, 2);
+    await insertPrediction(db, can, matchId, 0, 0);
+
+    await finish(db, matchId, 2, 1);
+
+    assert.deepEqual(await pointsOf(db, matchId), [
+      { username: 'ali', points: 5, result_type: 'exact' },
+      { username: 'burak', points: 4, result_type: 'outcome_diff' },
+      { username: 'can', points: 0, result_type: 'miss' },
+    ]);
+    const { rows } = await db.query('select scored_at is not null as scored from public.matches where id = $1', [
+      matchId,
+    ]);
+    assert.equal(rows[0].scored, true);
+  });
+
+  test('skor düzeltilince puanlar yeniden hesaplanır, çift puan oluşmaz', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const ali = await signUp(db, 'ali');
+    const matchId = await createMatch(db, seed, 60);
+    await insertPrediction(db, ali, matchId, 2, 1);
+
+    await finish(db, matchId, 2, 0);
+    assert.equal((await pointsOf(db, matchId))[0].points, 3);
+
+    await db.query('update public.matches set away_score = 1 where id = $1', [matchId]);
+    assert.equal((await pointsOf(db, matchId))[0].points, 5);
+
+    await db.query('update public.matches set away_score = 1 where id = $1', [matchId]);
+    const { rows } = await db.query('select count(*)::int as count from public.predictions');
+    assert.equal(rows[0].count, 1);
+    assert.equal((await pointsOf(db, matchId))[0].points, 5);
+  });
+
+  test('biten maç sonradan iptal sayılırsa puanlar geri alınır', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const ali = await signUp(db, 'ali');
+    const matchId = await createMatch(db, seed, 60);
+    await insertPrediction(db, ali, matchId, 1, 0);
+    await finish(db, matchId, 1, 0);
+
+    await db.query(
+      "update public.matches set status = 'cancelled', home_score = null, away_score = null where id = $1",
+      [matchId],
+    );
+
+    assert.deepEqual(await pointsOf(db, matchId), [
+      { username: 'ali', points: null, result_type: null },
+    ]);
+  });
+
+  test('sonucu değiştirmeyen güncelleme (günlük senkron) puanları bozmaz', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const ali = await signUp(db, 'ali');
+    const matchId = await createMatch(db, seed, 60);
+    await insertPrediction(db, ali, matchId, 1, 1);
+    await finish(db, matchId, 2, 2);
+
+    await db.query(
+      "update public.matches set status = 'finished', home_score = 2, away_score = 2, kickoff_at = kickoff_at where id = $1",
+      [matchId],
+    );
+
+    assert.deepEqual(await pointsOf(db, matchId), [
+      { username: 'ali', points: 4, result_type: 'outcome_diff' },
+    ]);
+  });
+
+  test('puan ayarı değişince yalnızca sonradan puanlanan maçlar etkilenir', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const ali = await signUp(db, 'ali');
+    const first = await createMatch(db, seed, 60);
+    const second = await createMatch(db, seed, 90);
+    await insertPrediction(db, ali, first, 2, 1);
+    await insertPrediction(db, ali, second, 2, 1);
+
+    await finish(db, first, 2, 1);
+    await db.query('update public.scoring_config set exact_points = 10');
+    await finish(db, second, 2, 1);
+
+    assert.equal((await pointsOf(db, first))[0].points, 5);
+    assert.equal((await pointsOf(db, second))[0].points, 10);
+  });
+
+  test('kullanıcı puanlamayı kendisi tetikleyemez', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const ali = await signUp(db, 'ali');
+    const matchId = await createMatch(db, seed, 60);
+
+    await assert.rejects(
+      asUser(db, ali, 'select public.score_match($1)', [matchId]),
+      PERMISSION_DENIED,
+    );
+  });
+});
+
 describe('puan ayarları', () => {
   test('varsayılan değerler 5/3/1 ve tabloda tek satır olabilir', async () => {
     const db = await createTestDb();

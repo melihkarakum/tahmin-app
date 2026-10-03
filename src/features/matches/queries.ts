@@ -21,6 +21,22 @@ export function useCurrentRound() {
   });
 }
 
+/** Sezondaki haftaların numaraları (küçükten büyüğe). */
+export function useSeasonRounds(seasonId: number | undefined) {
+  return useQuery({
+    queryKey: ['season-rounds', seasonId],
+    enabled: seasonId !== undefined,
+    queryFn: async (): Promise<number[]> => {
+      const { data, error } = await supabase
+        .from('matches')
+        .select('round')
+        .eq('season_id', seasonId as number);
+      if (error) throw error;
+      return [...new Set(data.map((row) => row.round))].sort((a, b) => a - b);
+    },
+  });
+}
+
 export function useRoundMatches(seasonId: number | undefined, round: number | undefined) {
   return useQuery({
     queryKey: ['matches', seasonId, round],

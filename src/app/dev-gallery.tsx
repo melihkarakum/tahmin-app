@@ -7,7 +7,8 @@ import { SectionTitle } from '@/components/ui/section-title';
 import { Text } from '@/components/ui/text';
 import { RankRow } from '@/features/leaderboard/components/rank-row';
 import { MatchCard } from '@/features/matches/components/match-card';
-import { WeekSummaryCard } from '@/features/matches/components/week-summary-card';
+import { WeekCard } from '@/features/matches/components/week-card';
+import { WeekPickerSheet } from '@/features/matches/components/week-picker-sheet';
 import { useNow } from '@/hooks/use-now';
 import { getRoomLeaderboard } from '@/mocks/data';
 import type { Match, Prediction, Team } from '@/types/domain';
@@ -84,9 +85,13 @@ function buildSamples(now: number): { match: Match; prediction?: Prediction }[] 
   ];
 }
 
+const SAMPLE_ROUNDS = Array.from({ length: 38 }, (_, index) => index + 1);
+
 export default function DevGallery() {
   const now = useNow();
   const [samples] = useState(() => buildSamples(Date.now()));
+  const [round, setRound] = useState(8);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   if (!__DEV__) return <Redirect href="/" />;
 
@@ -96,8 +101,30 @@ export default function DevGallery() {
       <Text className="mt-1 text-3xl font-black text-ink">Tasarım vitrini</Text>
 
       <View className="mt-5">
-        <WeekSummaryCard points={8} predicted={6} total={9} rank={3} />
+        <WeekCard
+          round={round}
+          dateRange="1–5 Eki"
+          isCurrent={round === 8}
+          canGoPrev={round > 1}
+          canGoNext={round < SAMPLE_ROUNDS.length}
+          onPrev={() => setRound(round - 1)}
+          onNext={() => setRound(round + 1)}
+          onOpenPicker={() => setPickerOpen(true)}
+          points={8}
+          predicted={6}
+          total={9}
+          rank={3}
+          note="3 maç tahminini bekliyor."
+        />
       </View>
+      <WeekPickerSheet
+        visible={pickerOpen}
+        rounds={SAMPLE_ROUNDS}
+        selected={round}
+        current={8}
+        onSelect={setRound}
+        onClose={() => setPickerOpen(false)}
+      />
 
       <SectionTitle title="Maç kartları" />
       <View className="gap-3">

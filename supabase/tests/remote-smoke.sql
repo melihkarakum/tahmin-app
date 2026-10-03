@@ -213,6 +213,30 @@ begin
     end if;
   end;
 
+  -- 12) Maç bitince otomatik puanlama (Melih 3-1 tahmin etti, maç 3-1 bitti: 5 puan) -----
+  update public.matches
+  set kickoff_at = now() - interval '2 hours', status = 'finished', home_score = 3, away_score = 1
+  where id = v_future_match;
+  select count(*) into v_count
+  from public.predictions
+  where user_id = melih and match_id = v_future_match and points = 5 and result_type = 'exact';
+  if v_count = 1 then
+    passed := passed || 'maç bitince otomatik puanlama'::text;
+  else
+    failed := failed || 'maç bitince otomatik puanlama'::text;
+  end if;
+
+  -- 13) Kullanıcı puanlamayı kendisi tetikleyemez -------------------------------------------
+  begin
+    set local role authenticated;
+    perform set_config('request.jwt.claims', json_build_object('sub', melih, 'role', 'authenticated')::text, true);
+    perform public.score_match(v_future_match);
+    reset role;
+    failed := failed || 'puanlamayı kullanıcı tetikleyemez'::text;
+  exception when insufficient_privilege then
+    passed := passed || 'puanlamayı kullanıcı tetikleyemez'::text;
+  end;
+
   raise exception 'SMOKE geçen=% kalan=% | geçenler: % | kalanlar: %',
     cardinality(passed), cardinality(failed),
     array_to_string(passed, ', '), coalesce(nullif(array_to_string(failed, ', '), ''), '-');

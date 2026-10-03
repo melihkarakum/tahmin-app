@@ -1,34 +1,41 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { PressableOpacity } from '@/components/ui/pressable-opacity';
 import { Screen } from '@/components/ui/screen';
-import { SectionTitle } from '@/components/ui/section-title';
 import { Text } from '@/components/ui/text';
-import { colors, tabularNums } from '@/constants/theme';
-import { RankRow } from '@/features/leaderboard/components/rank-row';
+import { colors } from '@/constants/theme';
 import { MatchCard } from '@/features/matches/components/match-card';
-import { WeekSummaryCard } from '@/features/matches/components/week-summary-card';
-import { sortMatchesForHome } from '@/features/matches/phase';
-import { useCurrentRound, useMyPredictions, useRoundMatches } from '@/features/matches/queries';
-import { useMyProfile } from '@/features/profile/use-my-profile';
+import { WeekCard } from '@/features/matches/components/week-card';
+import { WeekPickerSheet } from '@/features/matches/components/week-picker-sheet';
+import { getMatchPhase, sortMatchesForHome } from '@/features/matches/phase';
+import {
+  useCurrentRound,
+  useMyPredictions,
+  useRoundMatches,
+  useSeasonRounds,
+} from '@/features/matches/queries';
 import { useNow } from '@/hooks/use-now';
-import { formatNumber } from '@/lib/format';
-import { trUpper } from '@/lib/text';
-import { getNationalLeaderboard, getRoomLeaderboard, rooms } from '@/mocks/data';
+import { formatDateRange } from '@/lib/format';
+import type { Match, Prediction } from '@/types/domain';
 
 export default function HomeScreen() {
-  const router = useRouter();
   const now = useNow();
   const [refreshing, setRefreshing] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  // Kullanıcı bir hafta seçmediyse içinde bulunulan hafta gösterilir.
+  const [pickedRound, setPickedRound] = useState<number | null>(null);
 
-  const { data: profile } = useMyProfile();
   const roundQuery = useCurrentRound();
   const current = roundQuery.data ?? undefined;
-  const matchesQuery = useRoundMatches(current?.seasonId, current?.round);
+  const roundsQuery = useSeasonRounds(current?.seasonId);
+  const rounds = roundsQuery.data ?? [];
+  const selectedRound = pickedRound ?? current?.round;
+  const isCurrentRound = selectedRound !== undefined && selectedRound === current?.round;
+  const roundIndex = selectedRound === undefined ? -1 : rounds.indexOf(selectedRound);
+
+  const matchesQuery = useRoundMatches(current?.seasonId, selectedRound);
   const matches = matchesQuery.data ?? [];
   const predictionsQuery = useMyPredictions(matches.map((match) => match.id));
   const predictions = predictionsQuery.data ?? [];
@@ -40,15 +47,26 @@ export default function HomeScreen() {
   const loadError = roundQuery.error ?? matchesQuery.error ?? predictionsQuery.error;
 
   const predictionByMatch = new Map(predictions.map((p) => [p.matchId, p]));
-  const weekPoints = predictions.reduce((sum, p) => sum + (p.points ?? 0), 0);
+  const points = predictions.reduce((sum, p) => sum + (p.points ?? 0), 0);
+  // İçinde bulunulan haftada önce tahmin yapılabilen maçlar; diğer haftalarda takvim sırası.
+  const orderedMatches = isCurrentRound
+    ? sortMatchesForHome(matches, now)
+    : [...matches].sort((a, b) => a.kickoffAt.localeCompare(b.kickoffAt));
+  const kickoffs = matches.map((match) => match.kickoffAt).sort();
 
-  const friendsRoom = rooms[0];
-  const friendsRows = getRoomLeaderboard('week');
-  const nationalRank = getNationalLeaderboard('season').me.rank;
+  const goToIndex = (index: number) => {
+    const round = rounds[index];
+    if (round !== undefined) setPickedRound(round);
+  };
 
   const refresh = async () => {
     setRefreshing(true);
-    await Promise.all([roundQuery.refetch(), matchesQuery.refetch(), predictionsQuery.refetch()]);
+    await Promise.all([
+      roundQuery.refetch(),
+      roundsQuery.refetch(),
+      matchesQuery.refetch(),
+      predictionsQuery.refetch(),
+    ]);
     setRefreshing(false);
   };
 
@@ -57,39 +75,51 @@ export default function HomeScreen() {
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />
       }>
-      <Text className="text-sm font-semibold text-muted">
-        {current ? `Süper Lig · ${current.round}. Hafta` : 'Süper Lig'}
-      </Text>
-      <Text className="mt-1 text-3xl font-black text-ink">
-        Merhaba{profile ? ` ${profile.display_name}` : ''} 👋
+      <Text className="text-3xl font-extrabold text-ink">Süper Lig</Text>
+      <Text className="mt-1 text-sm font-medium text-muted">
+        {current ? `${current.seasonName} sezonu` : ' '}
       </Text>
 
-      <View className="mt-5">
-        <WeekSummaryCard
-          points={weekPoints}
-          predicted={predictions.length}
-          total={matches.length}
-        />
-      </View>
+      {current && selectedRound !== undefined ? (
+        <View className="mt-5">
+          <WeekCard
+            round={selectedRound}
+            dateRange={
+              kickoffs.length > 0
+                ? formatDateRange(kickoffs[0], kickoffs[kickoffs.length - 1])
+                : undefined
+            }
+            isCurrent={isCurrentRound}
+            canGoPrev={roundIndex > 0}
+            canGoNext={roundIndex >= 0 && roundIndex < rounds.length - 1}
+            onPrev={() => goToIndex(roundIndex - 1)}
+            onNext={() => goToIndex(roundIndex + 1)}
+            onOpenPicker={() => setPickerOpen(true)}
+            points={points}
+            predicted={predictions.length}
+            total={matches.length}
+            note={matches.length > 0 ? roundNote(matches, predictions, now) : ' '}
+          />
+        </View>
+      ) : null}
 
-      <SectionTitle title="Bu Haftanın Maçları" />
       {isLoading ? (
-        <View className="items-center py-10">
+        <View className="items-center py-16">
           <ActivityIndicator color={colors.primary} />
         </View>
       ) : loadError ? (
-        <View className="items-center gap-3 rounded-3xl border border-border bg-surface p-6">
+        <View className="mt-4 items-center gap-3 rounded-3xl border border-border bg-surface p-6">
           <Text className="text-center text-sm text-muted">Maçlar yüklenemedi.</Text>
           <Button label="Tekrar dene" variant="secondary" onPress={refresh} />
         </View>
-      ) : matches.length === 0 ? (
-        <View className="items-center gap-2 rounded-3xl border border-border bg-surface p-6">
+      ) : !current || matches.length === 0 ? (
+        <View className="mt-4 items-center gap-2 rounded-3xl border border-border bg-surface p-6">
           <Icon name="ball" size={28} color={colors.muted} />
           <Text className="text-center text-sm text-muted">Bu hafta için henüz maç yok.</Text>
         </View>
       ) : (
-        <View className="gap-3">
-          {sortMatchesForHome(matches, now).map((match) => (
+        <View className="mt-4 gap-3">
+          {orderedMatches.map((match) => (
             <MatchCard
               key={match.id}
               match={match}
@@ -100,50 +130,29 @@ export default function HomeScreen() {
         </View>
       )}
 
-      <SectionTitle
-        title="Arkadaşların"
-        actionLabel="Tümünü gör"
-        onActionPress={() =>
-          router.push({ pathname: '/room/[id]', params: { id: friendsRoom.id } })
-        }
-      />
-      <View className="overflow-hidden rounded-3xl border border-border bg-surface">
-        <View className="flex-row items-center justify-between border-b border-border px-4 py-3">
-          <View>
-            <Text className="text-sm font-bold text-ink">{friendsRoom.name}</Text>
-            <Text className="text-xs text-muted">Bu haftanın sıralaması</Text>
-          </View>
-          <SampleTag />
-        </View>
-        {friendsRows.slice(0, 3).map((row, index) => (
-          <RankRow key={row.userId} row={row} isLast={index === 2} />
-        ))}
-      </View>
-
-      <SectionTitle title="Türkiye Sıralaması" />
-      <PressableOpacity onPress={() => router.push('/leaderboard')}>
-        <View className="flex-row items-center justify-between rounded-3xl border border-border bg-surface p-4">
-          <View>
-            <View className="flex-row items-center gap-2">
-              <Text className="text-xs text-muted">Sezon sıran</Text>
-              <SampleTag />
-            </View>
-            <Text className="mt-0.5 text-2xl font-black text-ink" style={tabularNums}>
-              #{formatNumber(nationalRank)}
-            </Text>
-          </View>
-          <Icon name="chevronRight" size={16} color={colors.muted} />
-        </View>
-      </PressableOpacity>
+      {current && selectedRound !== undefined ? (
+        <WeekPickerSheet
+          visible={pickerOpen}
+          rounds={rounds}
+          selected={selectedRound}
+          current={current.round}
+          onSelect={setPickedRound}
+          onClose={() => setPickerOpen(false)}
+        />
+      ) : null}
     </Screen>
   );
 }
 
-/** Henüz gerçek veriye bağlanmamış bölümleri işaretler. */
-function SampleTag() {
-  return (
-    <View className="rounded-full border border-border px-2 py-0.5">
-      <Text className="text-[10px] font-bold tracking-wider text-muted">{trUpper('Örnek')}</Text>
-    </View>
-  );
+/** Hafta kartının altındaki açıklama: haftanın durumuna göre. */
+function roundNote(matches: Match[], predictions: Prediction[], now: number): string {
+  const predictedIds = new Set(predictions.map((p) => p.matchId));
+  const openMatches = matches.filter((match) => getMatchPhase(match, now) === 'open');
+  const waiting = openMatches.filter((match) => !predictedIds.has(match.id)).length;
+
+  if (waiting > 0) return `${waiting} maç tahminini bekliyor.`;
+  if (openMatches.length > 0) return 'Açık maçların hepsine tahmin yaptın.';
+  return predictions.length === 0
+    ? 'Bu haftaya tahmin yapmadın.'
+    : `${matches.length} maçın ${predictions.length} tanesine tahmin yaptın.`;
 }

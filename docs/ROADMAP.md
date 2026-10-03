@@ -16,7 +16,7 @@ Her faz tamamlanınca onay alınır; onaysız sonraki faza geçilmez.
 | 6 | Futbol API entegrasyonu | Tamamlandı (2026-10-03): senkron fonksiyonu ve zamanlayıcı çalışıyor, 2024-25 sezonuyla uçtan uca doğrulandı (19 takım, 342 maç). Güncel sezon için ücretli API planı gerekiyor |
 | 7 | Maçlar | Tamamlandı (2026-10-03): ana sayfa veritabanındaki güncel haftayı gösteriyor; test haftasıyla. Görsel tasarım koyu premium temaya geçti |
 | 8 | Tahmin sistemi | Tamamlandı (2026-10-03, FAZ 7 ile birlikte): tahmin sunucuya kaydediliyor ve güncelleniyor; 47 yerel test + gerçek projede 14 kontrol geçti. Telefonda deneme bekleniyor |
-| 9 | Puanlama | |
+| 9 | Puanlama | Tamamlandı (2026-10-03): maç bitince tahminler sunucuda otomatik puanlanıyor; skor düzeltmesinde yeniden, iptalde geri alınıyor. 55 yerel test + gerçek projede 16 kontrol geçti |
 | 10 | Arkadaş odaları | |
 | 11 | Sıralama | |
 | 12 | Profil ve istatistikler | |

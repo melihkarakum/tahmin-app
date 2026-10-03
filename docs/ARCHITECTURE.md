@@ -64,6 +64,8 @@ Supabase
 
 Puan değerleri `scoring_config` tablosunda durur. Kazanılan puan tahmin satırına yazılır; kural sonradan değişse de geçmiş değişmez. İptal edilen maç puanlanmaz. Eşitlikte sıra: toplam puan, tam skor sayısı, doğru sonuç sayısı.
 
+Nasıl çalışır (FAZ 9): `matches` tablosunda durum ya da skor değişince bir tetikleyici `score_match()` fonksiyonunu çalıştırır. Maç bittiyse o maçın tüm tahminleri `calculate_points()` ile puanlanır; skor düzeltilirse yeniden hesaplanır; maç bitmiş durumdan çıkarsa (iptal, erteleme) puanlar geri alınır. Senkron, yönetici düzeltmesi ya da elle güncelleme fark etmez. Uygulama puanlamayı tetikleyemez.
+
 ## Güvenlik modeli
 
 | Veri | Kullanıcı ne okur | Kullanıcı ne yazar |
@@ -113,7 +115,8 @@ Uygulamanın bilmesi gerekenler:
 
 - `current_round()`: güncel sezon ve hafta. Oynanan maç varsa onun haftası, yoksa sıradaki maçın haftası, o da yoksa son hafta; ertelenen maçlar sayılmaz.
 - `save_prediction(maç, ev, deplasman)`: uygulamanın tahmin yazabildiği tek yol. Kimlik oturumdan alınır, banlı hesap reddedilir, maç başladıysa kilit tetikleyicisi reddeder.
-- **Test haftası:** ücretli API planı alınana kadar `supabase/seed/test-round.sql` 9 deneme maçı ekler (`provider = 'test'`, uygulamada "TEST" etiketiyle görünür). Tekrar çalıştırılabilir; maç saatleri çalıştırıldığı ana göre yeniden kurulur. **Gerçek veriye geçmeden önce silinmeli** (komut dosyanın başında).
+- **Test haftaları:** `supabase/seed/test-extra-rounds.sql` 6., 7. (oynanmış) ve 9. (gelecek) haftayı ekler; var olan maçlara ve tahminlere dokunmaz.
+- **Test haftası (8.):** ücretli API planı alınana kadar `supabase/seed/test-round.sql` 9 deneme maçı ekler (`provider = 'test'`, uygulamada "TEST" etiketiyle görünür). Tekrar çalıştırılabilir; maç saatleri çalıştırıldığı ana göre yeniden kurulur. **Gerçek veriye geçmeden önce silinmeli** (komut dosyanın başında).
 
 ## Supabase güvenlik denetiminde bilinçli kabul edilen uyarılar
 
@@ -162,6 +165,7 @@ Yalnızca ekran ve `_layout` dosyaları `src/app/` içinde durur; geri kalan kod
 - **Koyu "stadyum gecesi" teması** (FotMob, Maçkolik, Apple Sports çizgisi): neredeyse siyah zemin, koyu kartlar, canlı yeşil vurgu, tam skor için altın, canlı maç için kırmızı.
 - **Takım rozetleri:** logo yerine kulüp renklerinde yuvarlak rozet ve kısa ad (`src/constants/team-colors.ts`). Logo kullanım hakkı netleşene kadar böyle kalır.
 - **Maç kartı skorbord düzeninde:** ev sahibi solda, deplasman sağda, ortada saat ya da skor; tahmin düğmeleri her takımın altında.
+- **Ana sayfa hafta hafta:** üstte yatay hafta seçici (içinde bulunulan hafta "BU HAFTA" etiketli ve açılışta seçili), altında yalnızca seçilen haftanın özeti ve maçları. Arkadaş ve Türkiye sıralaması ana sayfada değil, kendi sekmelerinde.
 - **Tasarım vitrini:** `/dev-gallery` adresi kartların tüm durumlarını örnek veriyle gösterir; giriş gerektirmez ve yalnızca geliştirme modunda açılır.
 - **Yazı tipi: Plus Jakarta Sans** (400, 500, 600, 700, 800). Rakamları eşit genişlikte olduğu için skorlar hizalı durur. Yazı tipleri uygulama açılırken yüklenir; yüklenene kadar açılış ekranı kalır. Kalınlık `font-bold` gibi sınıflarla seçilir; bu sınıflar doğrudan ilgili yazı tipi dosyasına bağlıdır (`tailwind.config.js`). Tüm metinler `src/components/ui/text.tsx` üzerinden geçer.
 - En dar desteklenen ekran 375 px (iPhone SE); düzenler 360 px'te de taşmadan çalışır.

@@ -22,6 +22,24 @@ export function formatTime(iso: string): string {
   return timeFormatter.format(new Date(iso));
 }
 
+const dayOnlyFormatter = new Intl.DateTimeFormat('tr-TR', { day: 'numeric' });
+const monthOnlyFormatter = new Intl.DateTimeFormat('tr-TR', { month: 'short' });
+
+/** Örnek: "17–20 Eyl", "29 Eyl – 2 Eki", tek günse "3 Eki" */
+export function formatDateRange(startIso: string, endIso: string): string {
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  const startMonth = monthOnlyFormatter.format(start);
+  const endMonth = monthOnlyFormatter.format(end);
+
+  if (startMonth !== endMonth) {
+    return `${dayMonthFormatter.format(start)} – ${dayMonthFormatter.format(end)}`;
+  }
+  const startDay = dayOnlyFormatter.format(start);
+  const endDay = dayOnlyFormatter.format(end);
+  return startDay === endDay ? `${startDay} ${startMonth}` : `${startDay}–${endDay} ${startMonth}`;
+}
+
 /** Örnek: 1842 -> "1.842" */
 export function formatNumber(value: number): string {
   return numberFormatter.format(value);
