@@ -1,5 +1,11 @@
 import type { ReactNode } from 'react';
-import { Pressable, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  type AccessibilityRole,
+  type AccessibilityState,
+  Pressable,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 type PressableOpacityProps = {
   children: ReactNode;
@@ -7,6 +13,8 @@ type PressableOpacityProps = {
   disabled?: boolean;
   hitSlop?: number;
   accessibilityLabel?: string;
+  accessibilityRole?: AccessibilityRole;
+  accessibilityState?: AccessibilityState;
   style?: StyleProp<ViewStyle>;
 };
 
@@ -17,6 +25,8 @@ export function PressableOpacity({
   disabled = false,
   hitSlop,
   accessibilityLabel,
+  accessibilityRole = 'button',
+  accessibilityState,
   style,
 }: PressableOpacityProps) {
   return (
@@ -24,7 +34,8 @@ export function PressableOpacity({
       onPress={onPress}
       disabled={disabled}
       hitSlop={hitSlop}
-      accessibilityRole="button"
+      accessibilityRole={accessibilityRole}
+      accessibilityState={accessibilityState}
       accessibilityLabel={accessibilityLabel}
       style={({ pressed }) => [{ opacity: disabled ? 0.35 : pressed ? 0.6 : 1 }, style]}>
       {children}

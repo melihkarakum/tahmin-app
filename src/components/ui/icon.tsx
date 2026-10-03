@@ -13,6 +13,7 @@ const symbols = {
   chevronRight: { ios: 'chevron.right', android: 'chevron_right', web: 'chevron_right' },
   share: { ios: 'square.and.arrow.up', android: 'share', web: 'share' },
   check: { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' },
+  checkmark: { ios: 'checkmark', android: 'check', web: 'check' },
 } as const;
 
 export type IconName = keyof typeof symbols;

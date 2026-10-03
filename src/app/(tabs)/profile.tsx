@@ -1,23 +1,42 @@
+import { useState } from 'react';
 import { Text, View } from 'react-native';
 
 import { Avatar } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { tabularNums } from '@/constants/theme';
+import { signOut, toAuthMessage } from '@/features/auth/api';
+import { FormError } from '@/features/auth/components/auth-screen';
 import { PointsChip } from '@/features/matches/components/points-chip';
+import { useMyProfile } from '@/features/profile/use-my-profile';
 import { formatNumber, resultLabels } from '@/lib/format';
 import { history, profileStats } from '@/mocks/data';
 import type { HistoryItem } from '@/types/domain';
 
 export default function ProfileScreen() {
+  // İsim gerçek profilden gelir; istatistikler FAZ 12'ye kadar örnek veridir.
+  const { data: profile } = useMyProfile();
   const stats = profileStats;
+  const [signOutError, setSignOutError] = useState<string | null>(null);
+
+  const handleSignOut = async () => {
+    setSignOutError(null);
+    try {
+      await signOut();
+    } catch (error) {
+      setSignOutError(toAuthMessage(error));
+    }
+  };
+
+  const displayName = profile?.display_name ?? '';
 
   return (
     <Screen>
       <View className="items-center pt-4">
-        <Avatar name={stats.displayName} size="lg" />
-        <Text className="mt-3 text-2xl font-bold text-ink">{stats.displayName}</Text>
-        <Text className="text-sm text-muted">@{stats.username}</Text>
+        <Avatar name={displayName || '?'} size="lg" />
+        <Text className="mt-3 text-2xl font-bold text-ink">{displayName}</Text>
+        <Text className="text-sm text-muted">{profile ? `@${profile.username}` : ' '}</Text>
       </View>
 
       <View className="mt-6 gap-3">
@@ -40,6 +59,11 @@ export default function ProfileScreen() {
         {history.map((item, index) => (
           <HistoryRow key={item.id} item={item} isLast={index === history.length - 1} />
         ))}
+      </View>
+
+      <View className="mt-8 gap-3">
+        {signOutError ? <FormError message={signOutError} /> : null}
+        <Button label="Çıkış Yap" variant="secondary" onPress={handleSignOut} />
       </View>
     </Screen>
   );

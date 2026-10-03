@@ -39,6 +39,44 @@ describe('kayıt ve profil', () => {
     assert.equal(rows[0].display_name, 'burak');
   });
 
+  test('kullanım koşulları kabul edilmeden kayıt olunamaz; kabul zamanı kaydedilir', async () => {
+    const db = await createTestDb();
+    await assert.rejects(
+      signUp(db, 'melih', undefined, { acceptedTerms: false }),
+      /kullanım koşulları/,
+    );
+
+    const id = await signUp(db, 'melih');
+    const { rows } = await db.query(
+      "select terms_accepted_at > now() - interval '1 minute' as recent from public.profiles where id = $1",
+      [id],
+    );
+    assert.equal(rows[0].recent, true);
+  });
+
+  test('kullanıcı adı uygunluğu giriş yapmadan sorulabilir, liste açılmaz', async () => {
+    const db = await createTestDb();
+    await signUp(db, 'burak');
+
+    const check = async (name) =>
+      (await asAnon(db, 'select public.is_username_available($1) as ok', [name])).rows[0].ok;
+
+    assert.equal(await check('melih'), true);
+    assert.equal(await check('Burak'), false);
+    assert.equal(await check('ab'), false);
+    assert.equal(await check('geçersiz ad'), false);
+    await assert.rejects(asAnon(db, 'select username from public.profiles'), PERMISSION_DENIED);
+  });
+
+  test('kullanım koşulları alanı uygulamadan okunamaz', async () => {
+    const db = await createTestDb();
+    const id = await signUp(db, 'melih');
+    await assert.rejects(
+      asUser(db, id, 'select terms_accepted_at from public.profiles where id = $1', [id]),
+      PERMISSION_DENIED,
+    );
+  });
+
   test('alınmış ya da geçersiz kullanıcı adıyla kayıt tamamen reddedilir', async () => {
     const db = await createTestDb();
     await signUp(db, 'burak');

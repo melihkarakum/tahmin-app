@@ -21,9 +21,9 @@ begin
   -- Hazırlık (yönetici yetkisiyle) ----------------------------------------------
   insert into auth.users (id, aud, role, email, raw_user_meta_data)
   values
-    (melih, 'authenticated', 'authenticated', 'smoke-melih@example.invalid', '{"username":"smoke_melih"}'),
-    (burak, 'authenticated', 'authenticated', 'smoke-burak@example.invalid', '{"username":"smoke_burak"}'),
-    (yabanci, 'authenticated', 'authenticated', 'smoke-yabanci@example.invalid', '{"username":"smoke_yabanci"}');
+    (melih, 'authenticated', 'authenticated', 'smoke-melih@example.invalid', '{"username":"smoke_melih","accepted_terms":true}'),
+    (burak, 'authenticated', 'authenticated', 'smoke-burak@example.invalid', '{"username":"smoke_burak","accepted_terms":true}'),
+    (yabanci, 'authenticated', 'authenticated', 'smoke-yabanci@example.invalid', '{"username":"smoke_yabanci","accepted_terms":true}');
 
   select count(*) into v_count from public.profiles where id in (melih, burak, yabanci);
   if v_count = 3 then

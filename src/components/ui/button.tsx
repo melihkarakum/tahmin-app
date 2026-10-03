@@ -6,14 +6,15 @@ type ButtonProps = {
   label: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary';
+  disabled?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
-export function Button({ label, onPress, variant = 'primary', style }: ButtonProps) {
+export function Button({ label, onPress, variant = 'primary', disabled = false, style }: ButtonProps) {
   const isPrimary = variant === 'primary';
 
   return (
-    <PressableOpacity onPress={onPress} style={style}>
+    <PressableOpacity onPress={onPress} disabled={disabled} style={style}>
       <View
         className={
           isPrimary

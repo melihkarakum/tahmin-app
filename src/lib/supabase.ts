@@ -1,8 +1,10 @@
 import 'react-native-url-polyfill/auto';
 
 import { createClient } from '@supabase/supabase-js';
+import { AppState, Platform } from 'react-native';
 
-import 'expo-sqlite/localStorage/install';
+import { authStorage } from '@/lib/auth-storage';
+import type { Database } from '@/types/database';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -13,11 +15,22 @@ if (!supabaseUrl || !supabasePublishableKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabasePublishableKey, {
   auth: {
-    storage: localStorage,
+    storage: authStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
   },
 });
+
+// Oturum anahtarı uygulama ön plandayken arka planda yenilenir, arka plana geçince durur.
+if (Platform.OS !== 'web') {
+  AppState.addEventListener('change', (state) => {
+    if (state === 'active') {
+      supabase.auth.startAutoRefresh();
+    } else {
+      supabase.auth.stopAutoRefresh();
+    }
+  });
+}

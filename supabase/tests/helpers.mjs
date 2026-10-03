@@ -40,8 +40,9 @@ export async function asAnon(db, sql, params = []) {
 }
 
 /** Kayıt olmayı taklit eder: auth.users'a satır ekler, profil tetikleyiciyle oluşur. */
-export async function signUp(db, username, displayName) {
-  const metadata = displayName ? { username, display_name: displayName } : { username };
+export async function signUp(db, username, displayName, { acceptedTerms = true } = {}) {
+  const metadata = { username, accepted_terms: acceptedTerms };
+  if (displayName) metadata.display_name = displayName;
   const result = await db.query(
     'insert into auth.users (email, raw_user_meta_data) values ($1, $2) returning id',
     [`${username}@example.com`, JSON.stringify(metadata)],

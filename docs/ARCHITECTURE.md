@@ -10,7 +10,7 @@ FAZ 1'de alınan kararlar. Bir karar değişirse önce bu dosya güncellenir.
 | Dil | TypeScript |
 | Sayfa geçişleri | Expo Router; ekranlar `src/app/` içinde |
 | Stil | NativeWind 4.2.7 + Tailwind CSS 3.4 |
-| Sunucu verisi | TanStack Query (FAZ 5'te eklenecek) |
+| Sunucu verisi | TanStack Query |
 | Backend | Supabase: Auth, PostgreSQL, RLS, Edge Functions, `pg_cron` |
 | Oturum saklama | `expo-sqlite` localStorage |
 | Bildirim | `expo-notifications` + Expo push servisi |
@@ -34,6 +34,14 @@ Supabase
           ▼                     ▼
      Futbol API'si        Expo push servisi → telefon
 ```
+
+## Oturum
+
+- Giriş yapılmamışsa yalnızca `(auth)` ekranları (giriş, kayıt) açılabilir; giriş yapılmışsa yalnızca uygulama ekranları. Bunu `src/app/_layout.tsx` içindeki `Stack.Protected` sağlar; giriş ya da çıkış olunca yönlendirme kendiliğinden olur.
+- Kayıtlı oturum okunana kadar açılış ekranı (splash) açık kalır.
+- Kullanıcı değişince (çıkış ya da başka hesap) TanStack Query önbelleği temizlenir (`src/features/auth/auth-provider.tsx`).
+- Oturum telefonda `expo-sqlite` localStorage'da, web önizlemesinde tarayıcının localStorage'ında saklanır (`src/lib/auth-storage.ts` ve `.web.ts`).
+- Kayıtta kullanıcı adı, görünen ad ve kullanım koşulu onayı Supabase'e kullanıcı bilgisi olarak gider; profil sunucuda tetikleyiciyle oluşur. Onay yoksa kayıt sunucuda reddedilir.
 
 ## Temel akışlar
 

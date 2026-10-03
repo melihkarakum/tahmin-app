@@ -10,6 +10,7 @@ import { colors, tabularNums } from '@/constants/theme';
 import { RankRow } from '@/features/leaderboard/components/rank-row';
 import { MatchCard } from '@/features/matches/components/match-card';
 import { sortMatchesForHome } from '@/features/matches/phase';
+import { useMyProfile } from '@/features/profile/use-my-profile';
 import { useNow } from '@/hooks/use-now';
 import { formatNumber } from '@/lib/format';
 import {
@@ -18,7 +19,6 @@ import {
   getRoomLeaderboard,
   initialPredictions,
   matches,
-  profileStats,
   rooms,
 } from '@/mocks/data';
 import type { Prediction } from '@/types/domain';
@@ -26,6 +26,7 @@ import type { Prediction } from '@/types/domain';
 export default function HomeScreen() {
   const router = useRouter();
   const now = useNow();
+  const { data: profile } = useMyProfile();
   const [predictions, setPredictions] = useState<Prediction[]>(initialPredictions);
 
   const predictionByMatch = new Map(predictions.map((p) => [p.matchId, p]));
@@ -48,7 +49,9 @@ export default function HomeScreen() {
     <Screen>
       <View className="flex-row items-start justify-between">
         <View>
-          <Text className="text-3xl font-bold text-ink">Merhaba {profileStats.displayName} 👋</Text>
+          <Text className="text-3xl font-bold text-ink">
+            Merhaba{profile ? ` ${profile.display_name}` : ''} 👋
+          </Text>
           <Text className="mt-1 text-sm text-muted">Süper Lig · {currentRound}. Hafta</Text>
         </View>
         <View className="mt-2 rounded-full border border-border px-2.5 py-1">

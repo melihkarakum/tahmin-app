@@ -12,7 +12,7 @@ Her faz tamamlanınca onay alınır; onaysız sonraki faza geçilmez.
 | 3 | Supabase kurulumu | Tamamlandı (2026-10-03): proje `tahminet` (`orkoxffobuwdljcdmltg`, Frankfurt), `.env` yazıldı, CLI bağlı |
 | – | Arayüz önizlemesi (örnek veriyle) | Tamamlandı (2026-10-02); ekranlar `src/mocks/data.ts` ile çalışıyor, FAZ 7–12'de gerçek veriye bağlanacak |
 | 4 | Veritabanı | Tamamlandı (2026-10-03): 4 migration yüklendi; 29 yerel test, gerçek projede 12 güvenlik kontrolü ve Supabase güvenlik/performans denetimi temiz |
-| 5 | Giriş ve kayıt | |
+| 5 | Giriş ve kayıt | Kod tamam (2026-10-03): kayıt, giriş, çıkış, oturum hatırlama, kullanım koşulu onayı; 32 yerel test + gerçek projede kontrol geçti. Telefonda gerçek kayıt testi bekleniyor |
 | 6 | Futbol API entegrasyonu | |
 | 7 | Maçlar | |
 | 8 | Tahmin sistemi | |
@@ -66,7 +66,10 @@ Listeye eklenen zorunlular: uygulama içinden hesap silme, kayıtta gizlilik ve 
 
 | Konu | En geç |
 |---|---|
-| Kendi e-posta servisi (hazır servis yalnızca ekip adreslerine gönderir) | Arkadaşlar kayıt olmadan önce |
+| Kendi e-posta servisi (hazır servis yalnızca ekip adreslerine gönderir) ve e-posta doğrulamasını yeniden açmak | Arkadaşlar kayıt olmadan önce |
+| Şifre sıfırlama (e-posta servisi ve uygulamaya dönen bağlantı gerektirir) | Beta öncesi |
+| Kullanım koşulları ve gizlilik politikası metinleri (kayıt ekranındaki onay kutusu bunlara bağlanacak) | Beta öncesi |
+| Supabase'de en kısa şifre uzunluğunu 8'e çıkarmak (uygulama zaten 8 istiyor) | FAZ 17 |
 | Uygulamanın gerçek adı ve mağaza kimliği | FAZ 13 |
 | Apple Developer hesabı (iPhone'da bildirim testi için) | FAZ 13 |
 | Alan adı (davet linki, e-posta göndereni, gizlilik sayfası) | FAZ 14 |
