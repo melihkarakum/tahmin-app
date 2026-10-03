@@ -75,7 +75,7 @@ Anahtarlar:
 
 ## Veritabanı tabloları
 
-`profiles`, `leagues`, `seasons`, `teams`, `matches`, `predictions`, `rooms`, `room_members`, `scoring_config`, `push_tokens`.
+`profiles`, `leagues`, `seasons`, `teams`, `matches`, `predictions`, `rooms`, `room_members`, `scoring_config`. Şema `supabase/migrations/` içindedir. `push_tokens` bildirim fazında (FAZ 13) eklenecek.
 
 Bilinçli olarak olmayanlar:
 
@@ -83,7 +83,17 @@ Bilinçli olarak olmayanlar:
 - `room_predictions`: tahmin kullanıcıya aittir, odaya değil.
 - `badges`, `user_badges`, `notifications`: MVP sonrası.
 
-Silinen kullanıcının satırı silinmez; kişisel verileri temizlenip anonimleştirilir.
+Silinen kullanıcının satırı silinmez; kişisel verileri temizlenip anonimleştirilir. Bu yüzden `profiles` tablosunun `auth.users`'a yabancı anahtarı yoktur; profil, kayıt anında bir tetikleyiciyle oluşur.
+
+Uygulamanın bilmesi gerekenler:
+
+- `profiles` tablosunda yalnızca `id`, `username`, `display_name`, `created_at` okunabilir; sorgular `select('*')` değil, bu sütunları tek tek seçmelidir.
+- Tahmin, puan, maç, oda oluşturma ve odaya katılma için uygulamanın doğrudan yazma izni yoktur; bunlar sunucu fonksiyonlarıyla yapılır.
+- Tahmin kilidi tabloya bağlı bir tetikleyicidir: tahmin hangi yoldan yazılırsa yazılsın, maç başladıysa (sunucu saatine göre) reddedilir.
+
+## Veritabanı testleri
+
+`npm run test:db` komutu, migration dosyalarını bilgisayarda çalışan geçici bir Postgres'e (PGlite) kurar ve güvenlik kurallarını dener. Docker gerekmez. Supabase'e özgü roller ve `auth.uid()` için `supabase/tests/supabase-shim.sql` kullanılır; bu dosya yalnızca testler içindir, Supabase'e yüklenmez. Testler gerçek Supabase'in yerini tutmaz; her migration ayrıca gerçek projede de denenir.
 
 ## Klasör yapısı
 

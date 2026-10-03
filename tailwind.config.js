@@ -8,10 +8,12 @@ module.exports = {
       colors: {
         background: 'rgb(var(--color-background) / <alpha-value>)',
         surface: 'rgb(var(--color-surface) / <alpha-value>)',
+        'surface-muted': 'rgb(var(--color-surface-muted) / <alpha-value>)',
         border: 'rgb(var(--color-border) / <alpha-value>)',
         ink: 'rgb(var(--color-ink) / <alpha-value>)',
         muted: 'rgb(var(--color-muted) / <alpha-value>)',
         primary: 'rgb(var(--color-primary) / <alpha-value>)',
+        'primary-soft': 'rgb(var(--color-primary-soft) / <alpha-value>)',
         'on-primary': 'rgb(var(--color-on-primary) / <alpha-value>)',
         danger: 'rgb(var(--color-danger) / <alpha-value>)',
       },

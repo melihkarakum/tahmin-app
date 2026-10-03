@@ -8,9 +8,10 @@ Her faz tamamlanınca onay alınır; onaysız sonraki faza geçilmez.
 |---|---|---|
 | 0 | Ürün analizi | Tamamlandı (2026-10-02) |
 | 1 | Teknik mimari | Tamamlandı (2026-10-02) |
-| 2 | Proje kurulumu | Telefon testi ve GitHub bekliyor |
-| 3 | Supabase kurulumu | |
-| 4 | Veritabanı | |
+| 2 | Proje kurulumu | Tamamlandı (2026-10-02) |
+| 3 | Supabase kurulumu | Tamamlandı (2026-10-03): proje `tahminet` (`orkoxffobuwdljcdmltg`, Frankfurt), `.env` yazıldı, CLI bağlı |
+| – | Arayüz önizlemesi (örnek veriyle) | Tamamlandı (2026-10-02); ekranlar `src/mocks/data.ts` ile çalışıyor, FAZ 7–12'de gerçek veriye bağlanacak |
+| 4 | Veritabanı | Tamamlandı (2026-10-03): 4 migration yüklendi; 29 yerel test, gerçek projede 12 güvenlik kontrolü ve Supabase güvenlik/performans denetimi temiz |
 | 5 | Giriş ve kayıt | |
 | 6 | Futbol API entegrasyonu | |
 | 7 | Maçlar | |
@@ -53,8 +54,13 @@ Listeye eklenen zorunlular: uygulama içinden hesap silme, kayıtta gizlilik ve 
 ## Doğrulanmamış bilgiler
 
 - **API-Football ücretsiz planı:** içinde bulunulan sezonu verip vermediği bilinmiyor; resmi fiyat sayfası okunamadı. FAZ 6'nın ilk adımı gerçek anahtarla denemek. Vermiyorsa 19 $/ay.
-- **Edge Function yükleme:** Supabase CLI ile yüklemenin Docker isteyip istemediği belirsiz. İsterse panel üzerindeki editör kullanılır.
-- **Supabase ücretsiz planı:** en fazla 2 aktif proje. Mevcut proje sayısı FAZ 3'te kontrol edilecek.
+- **Edge Function yükleme:** Supabase CLI ile yüklemenin Docker isteyip istemediği belirsiz. İsterse panel üzerindeki editör kullanılır. (Migration yükleme Docker'sız çalışıyor: `supabase db push`.)
+
+## Bilinen ayarlar
+
+- **E-posta doğrulaması açık** (Supabase varsayılanı). Hazır e-posta servisi yalnızca ekip adreslerine, saatte 2 ileti gönderir. FAZ 5'te karar verilecek.
+- **Veritabanı komutları şifresiz çalışıyor:** `supabase db push` ve `supabase db query --linked` geçici bir giriş rolü kullanıyor.
+- **Gerçek projede güvenlik kontrolü:** `supabase db query --linked -f supabase/tests/remote-smoke.sql` (veri bırakmaz; sonuç "SMOKE geçen=… kalan=…" hata mesajı olarak döner).
 
 ## Zamanı gelince karar verilecekler
 
