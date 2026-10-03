@@ -2,13 +2,17 @@
 //   ?mode=full  : güncel sezonun tüm fikstürünü ve takımlarını günceller (günde bir kez)
 //   ?mode=live  : başlamak üzere olan ya da oynanan maçların durumunu ve skorunu günceller (10 dakikada bir)
 //   ?mode=probe : yalnızca API hesabını ve sezon erişimini kontrol eder, veritabanına yazmaz
+//   ?mode=logos : logosu henüz kopyalanmamış takımların logosunu depoya kopyalar (full da yapar)
 // Her çağrı x-sync-secret başlığında SYNC_SECRET değerini taşımalıdır.
 
-import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
+import { isAuthorizedCall, json, serviceClient } from '../_shared/supabase.ts';
 import {
   type ApiFixture,
   hasApiErrors,
+  isProviderLogoUrl,
+  logoPath,
   resolveResult,
   seasonName,
   shortName,
@@ -18,6 +22,7 @@ import {
 const API_BASE = 'https://v3.football.api-sports.io';
 const PROVIDER = 'api-football';
 const LEAGUE_ID = Deno.env.get('API_FOOTBALL_LEAGUE_ID') ?? '203';
+const LOGO_BUCKET = 'team-logos';
 
 type ApiLeague = {
   league: { id: number; name: string; type: string };
@@ -31,26 +36,6 @@ type ApiStatus = {
   subscription?: { plan?: string; end?: string; active?: boolean };
   requests?: { current?: number; limit_day?: number };
 };
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
-}
-
-function serviceClient(): SupabaseClient {
-  const url = Deno.env.get('SUPABASE_URL');
-  let key: string | undefined;
-  const secretKeys = Deno.env.get('SUPABASE_SECRET_KEYS');
-  if (secretKeys) {
-    const parsed = JSON.parse(secretKeys) as Record<string, string>;
-    key = parsed.default ?? Object.values(parsed)[0];
-  }
-  key ??= Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!url || !key) throw new Error('Supabase ortam değişkenleri eksik.');
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-}
 
 async function apiGet<T>(path: string, params: Record<string, string | number> = {}): Promise<T> {
   const apiKey = Deno.env.get('API_FOOTBALL_KEY');
@@ -197,7 +182,54 @@ async function fullSync(seasonOverride?: number) {
   const { error: matchError } = await db.from('matches').upsert(rows, { onConflict: 'provider,provider_id' });
   if (matchError) throw matchError;
 
-  return { mode: 'full', season: year, isCurrent, teams: teamRows.size, matches: rows.length, skipped };
+  // Ligde yeni takım varsa (örn. yükselen) logosu kopyalanır. Hata maç senkronunu bozmaz.
+  let logos: unknown;
+  try {
+    logos = await mirrorLogos(db);
+  } catch (error) {
+    logos = { error: error instanceof Error ? error.message : String(error) };
+  }
+
+  return { mode: 'full', season: year, isCurrent, teams: teamRows.size, matches: rows.length, skipped, logos };
+}
+
+/**
+ * Logosu henüz kopyalanmamış takımların logosunu futbol API'sinin görsel sunucusundan indirip
+ * team-logos deposuna yükler. Görsel istekleri günlük API hakkından düşmez; her logo bir kez indirilir.
+ */
+async function mirrorLogos(db: SupabaseClient) {
+  const { data: teams, error } = await db
+    .from('teams')
+    .select('id, provider, provider_id, logo_url')
+    .is('logo_path', null)
+    .not('logo_url', 'is', null);
+  if (error) throw error;
+
+  let copied = 0;
+  const failed: string[] = [];
+  for (const team of teams as { id: number; provider: string; provider_id: string; logo_url: string }[]) {
+    try {
+      if (!isProviderLogoUrl(team.logo_url)) throw new Error('izin verilmeyen adres');
+      const response = await fetch(team.logo_url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const contentType = (response.headers.get('content-type') ?? '').split(';')[0].trim();
+      const path = logoPath(team.provider, team.provider_id, contentType);
+      if (!path) throw new Error(`desteklenmeyen dosya türü: ${contentType || 'yok'}`);
+
+      const { error: uploadError } = await db.storage
+        .from(LOGO_BUCKET)
+        .upload(path, await response.arrayBuffer(), { contentType, upsert: true, cacheControl: '604800' });
+      if (uploadError) throw uploadError;
+
+      const { error: updateError } = await db.from('teams').update({ logo_path: path }).eq('id', team.id);
+      if (updateError) throw updateError;
+      copied += 1;
+    } catch (error) {
+      failed.push(`${team.provider_id}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  return { mode: 'logos', copied, failed };
 }
 
 async function liveSync() {
@@ -245,10 +277,7 @@ async function liveSync() {
 }
 
 Deno.serve(async (request) => {
-  const expectedSecret = Deno.env.get('SYNC_SECRET');
-  if (!expectedSecret || request.headers.get('x-sync-secret') !== expectedSecret) {
-    return json({ error: 'forbidden' }, 403);
-  }
+  if (!isAuthorizedCall(request)) return json({ error: 'forbidden' }, 403);
 
   const params = new URL(request.url).searchParams;
   const mode = params.get('mode') ?? 'live';
@@ -257,6 +286,7 @@ Deno.serve(async (request) => {
     if (mode === 'probe') return json(await probe());
     if (mode === 'full') return json(await fullSync(seasonParam ? Number(seasonParam) : undefined));
     if (mode === 'live') return json(await liveSync());
+    if (mode === 'logos') return json(await mirrorLogos(serviceClient()));
     return json({ error: `bilinmeyen mod: ${mode}` }, 400);
   } catch (error) {
     console.error(error);

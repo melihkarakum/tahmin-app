@@ -92,11 +92,15 @@ export async function insertPrediction(db, userId, matchId, homeGoals, awayGoals
   );
 }
 
-/** Bir oda oluşturur ve sahibini üye yapar (FAZ 10'daki fonksiyon gelene kadar test için). */
-export async function createRoom(db, ownerId, code, memberIds = []) {
+/**
+ * Bir oda oluşturur ve sahibini üye yapar (yönetici yetkisiyle, doğrudan).
+ * Oda varsayılan olarak 3 gün önce kurulmuş sayılır; böylece testlerde "bitmiş" maçlar
+ * oda kurulduktan sonra oynanmış olur. createdHoursAgo ile değiştirilebilir.
+ */
+export async function createRoom(db, ownerId, code, memberIds = [], { createdHoursAgo = 72 } = {}) {
   const room = await db.query(
-    "insert into public.rooms (name, code, owner_id) values ('Test Odası', $1, $2) returning id",
-    [code, ownerId],
+    "insert into public.rooms (name, code, owner_id, created_at) values ('Test Odası', $1, $2, now() - make_interval(hours => $3)) returning id",
+    [code, ownerId, createdHoursAgo],
   );
   const roomId = room.rows[0].id;
   for (const userId of [ownerId, ...memberIds]) {

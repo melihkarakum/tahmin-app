@@ -778,6 +778,446 @@ describe('otomatik puanlama', () => {
   });
 });
 
+describe('oda kurma ve katılma', () => {
+  const createRoomAs = (db, userId, name) =>
+    asUser(db, userId, 'select id, code, owner_id from public.create_room($1)', [name]);
+  const joinAs = (db, userId, code) =>
+    asUser(db, userId, 'select status, room_id from public.join_room($1)', [code]);
+
+  test('oda kurulur: kod 6 karakter, karışan harf yok, kuran üye olur', async () => {
+    const db = await createTestDb();
+    const melih = await signUp(db, 'melih');
+
+    const { rows } = await createRoomAs(db, melih, '  Halısaha Tayfa  ');
+    assert.match(rows[0].code, /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/);
+    assert.equal(rows[0].owner_id, melih);
+
+    const room = await db.query('select name from public.rooms where id = $1', [rows[0].id]);
+    assert.equal(room.rows[0].name, 'Halısaha Tayfa');
+    const members = await db.query('select user_id from public.room_members where room_id = $1', [
+      rows[0].id,
+    ]);
+    assert.deepEqual(members.rows, [{ user_id: melih }]);
+  });
+
+  test('oda adı 2-40 karakter olmalı; en fazla 10 oda kurulabilir', async () => {
+    const db = await createTestDb();
+    const melih = await signUp(db, 'melih');
+
+    await assert.rejects(createRoomAs(db, melih, 'A'), /2-40 karakter/);
+    for (let index = 1; index <= 10; index += 1) {
+      await createRoomAs(db, melih, `Oda ${index}`);
+    }
+    await assert.rejects(createRoomAs(db, melih, 'Oda 11'), /En fazla 10 oda/);
+  });
+
+  test('kodla katılır; ikinci kez katılınca "zaten üye" döner; kod büyük-küçük harf duyarsız', async () => {
+    const db = await createTestDb();
+    const melih = await signUp(db, 'melih');
+    const burak = await signUp(db, 'burak');
+    const { rows } = await createRoomAs(db, melih, 'Halısaha Tayfa');
+    const code = rows[0].code;
+
+    const first = await joinAs(db, burak, ` ${code.toLowerCase()} `);
+    const second = await joinAs(db, burak, code);
+
+    assert.deepEqual(first.rows[0], { status: 'joined', room_id: rows[0].id });
+    assert.deepEqual(second.rows[0], { status: 'already_member', room_id: rows[0].id });
+    const members = await db.query('select count(*)::int as count from public.room_members');
+    assert.equal(members.rows[0].count, 2);
+  });
+
+  test('yanlış kod: "bulunamadı"; 10 yanlış denemeden sonra katılma geçici olarak durur', async () => {
+    const db = await createTestDb();
+    const melih = await signUp(db, 'melih');
+    const burak = await signUp(db, 'burak');
+    const { rows } = await createRoomAs(db, melih, 'Halısaha Tayfa');
+
+    for (let attempt = 1; attempt <= 10; attempt += 1) {
+      const result = await joinAs(db, burak, 'ZZZZZZ');
+      assert.equal(result.rows[0].status, 'not_found');
+    }
+    const blocked = await joinAs(db, burak, rows[0].code);
+    assert.equal(blocked.rows[0].status, 'rate_limited');
+  });
+
+  test('banlı kullanıcı oda kuramaz ve katılamaz; giriş yapmamış biri hiç çağıramaz', async () => {
+    const db = await createTestDb();
+    const melih = await signUp(db, 'melih');
+    const burak = await signUp(db, 'burak');
+    const { rows } = await createRoomAs(db, melih, 'Halısaha Tayfa');
+    await db.query('update public.profiles set is_banned = true where id = $1', [burak]);
+
+    await assert.rejects(createRoomAs(db, burak, 'Burak FC'), /işlem yapılamaz/);
+    await assert.rejects(joinAs(db, burak, rows[0].code), /işlem yapılamaz/);
+    await assert.rejects(
+      asAnon(db, 'select * from public.join_room($1)', [rows[0].code]),
+      PERMISSION_DENIED,
+    );
+  });
+});
+
+describe('oda sıralaması', () => {
+  const finish = (db, matchId, home, away) =>
+    db.query(
+      "update public.matches set kickoff_at = now() - interval '2 hours', status = 'finished', home_score = $2, away_score = $3 where id = $1",
+      [matchId, home, away],
+    );
+
+  async function roomWithScores() {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const ali = await signUp(db, 'ali', 'Ali');
+    const burak = await signUp(db, 'burak', 'Burak');
+    const can = await signUp(db, 'can', 'Can');
+    const deniz = await signUp(db, 'deniz', 'Deniz');
+    const roomId = await createRoom(db, ali, 'ABC234', [burak, can]);
+
+    const week1 = await createMatch(db, seed, 60);
+    const week2 = await createMatch(db, seed, 120);
+    await db.query('update public.matches set round = 2 where id = $1', [week2]);
+
+    // 1. hafta (2-1 bitti): Ali tam skor 5, Burak 3-2 → 4, Can tahmin yok; Deniz odada değil, 5 alır.
+    await insertPrediction(db, ali, week1, 2, 1);
+    await insertPrediction(db, burak, week1, 3, 2);
+    await insertPrediction(db, deniz, week1, 2, 1);
+    // 2. hafta (1-0 bitti): Burak 1-0 → 5, Ali 2-1 → 4, Can 0-0 → 0.
+    await insertPrediction(db, burak, week2, 1, 0);
+    await insertPrediction(db, ali, week2, 2, 1);
+    await insertPrediction(db, can, week2, 0, 0);
+    await finish(db, week1, 2, 1);
+    await finish(db, week2, 1, 0);
+
+    return { db, roomId, ali, burak, can, deniz };
+  }
+
+  test('sezon sıralaması: puan eşitse tam skor sayısı, o da eşitse doğru sonuç sayısı belirler', async () => {
+    const { db, roomId, ali } = await roomWithScores();
+    const { rows } = await asUser(
+      db,
+      ali,
+      'select display_name, points, exact_count, outcome_count, scored_count, rank from public.get_room_leaderboard($1)',
+      [roomId],
+    );
+
+    assert.deepEqual(rows, [
+      { display_name: 'Ali', points: 9, exact_count: 1, outcome_count: 2, scored_count: 2, rank: 1 },
+      { display_name: 'Burak', points: 9, exact_count: 1, outcome_count: 2, scored_count: 2, rank: 1 },
+      { display_name: 'Can', points: 0, exact_count: 0, outcome_count: 0, scored_count: 1, rank: 3 },
+    ]);
+  });
+
+  test('haftalık sıralama yalnızca o haftayı sayar; odada olmayan listede yer almaz', async () => {
+    const { db, roomId, burak } = await roomWithScores();
+    const { rows } = await asUser(
+      db,
+      burak,
+      'select display_name, points, rank from public.get_room_leaderboard($1, 2)',
+      [roomId],
+    );
+
+    assert.deepEqual(rows, [
+      { display_name: 'Burak', points: 5, rank: 1 },
+      { display_name: 'Ali', points: 4, rank: 2 },
+      { display_name: 'Can', points: 0, rank: 3 },
+    ]);
+  });
+
+  test('oda kurulmadan önce başlayan maçlar odada sayılmaz; sonraki maçlar sayılır', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const ali = await signUp(db, 'ali', 'Ali');
+    const burak = await signUp(db, 'burak', 'Burak');
+    // Oda 3 saat önce kuruldu; Burak odaya sonradan (şimdi) katılmış gibi düşünülebilir.
+    const roomId = await createRoom(db, ali, 'ABC234', [burak], { createdHoursAgo: 3 });
+    const before = await createMatch(db, seed, 60);
+    const after = await createMatch(db, seed, 90);
+    await insertPrediction(db, burak, before, 2, 1);
+    await insertPrediction(db, burak, after, 1, 0);
+
+    await db.query(
+      "update public.matches set kickoff_at = now() - interval '5 hours', status = 'finished', home_score = 2, away_score = 1 where id = $1",
+      [before],
+    );
+    await db.query(
+      "update public.matches set kickoff_at = now() - interval '2 hours', status = 'finished', home_score = 1, away_score = 0 where id = $1",
+      [after],
+    );
+
+    const room = await asUser(
+      db,
+      burak,
+      'select display_name, points from public.get_room_leaderboard($1) order by display_name',
+      [roomId],
+    );
+    const national = await asUser(
+      db,
+      burak,
+      'select points from public.get_national_leaderboard() where is_me',
+    );
+
+    // Odada yalnızca "after" maçının 5 puanı; Türkiye sıralamasında ikisi birden (10).
+    assert.deepEqual(room.rows, [
+      { display_name: 'Ali', points: 0 },
+      { display_name: 'Burak', points: 5 },
+    ]);
+    assert.equal(national.rows[0].points, 10);
+  });
+
+  test('odanın üyesi olmayan sıralamayı göremez', async () => {
+    const { db, roomId, deniz } = await roomWithScores();
+    await assert.rejects(
+      asUser(db, deniz, 'select * from public.get_room_leaderboard($1)', [roomId]),
+      /üyesi değilsin/,
+    );
+  });
+
+  test('odalarım: üye sayısı, sıram ve lider', async () => {
+    const { db, can } = await roomWithScores();
+    const { rows } = await asUser(
+      db,
+      can,
+      'select name, is_owner, member_count, my_rank, leader_points from public.get_my_rooms()',
+    );
+
+    assert.deepEqual(rows, [
+      { name: 'Test Odası', is_owner: false, member_count: 3, my_rank: 3, leader_points: 9 },
+    ]);
+  });
+});
+
+describe('Türkiye sıralaması', () => {
+  const finish = (db, matchId, home, away) =>
+    db.query(
+      "update public.matches set kickoff_at = now() - interval '2 hours', status = 'finished', home_score = $2, away_score = $3 where id = $1",
+      [matchId, home, away],
+    );
+
+  async function league() {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const ali = await signUp(db, 'ali', 'Ali');
+    const burak = await signUp(db, 'burak', 'Burak');
+    const can = await signUp(db, 'can', 'Can');
+    const deniz = await signUp(db, 'deniz', 'Deniz');
+    const emre = await signUp(db, 'emre', 'Emre');
+
+    const week1 = await createMatch(db, seed, 60);
+    const week2 = await createMatch(db, seed, 120);
+    await db.query('update public.matches set round = 2 where id = $1', [week2]);
+
+    await insertPrediction(db, ali, week1, 2, 1); // 5
+    await insertPrediction(db, burak, week1, 3, 2); // 4
+    await insertPrediction(db, can, week1, 0, 0); // 0
+    await insertPrediction(db, deniz, week1, 2, 1); // 5 (banlanacak)
+    await insertPrediction(db, burak, week2, 1, 0); // 5
+    await insertPrediction(db, ali, week2, 0, 1); // 0
+    await finish(db, week1, 2, 1);
+    await finish(db, week2, 1, 0);
+    await db.query('update public.profiles set is_banned = true where id = $1', [deniz]);
+
+    return { db, ali, burak, can, emre };
+  }
+
+  test('sezon: puan sırası; banlı ve hiç puanlanmamış kullanıcı yok; toplam katılımcı sayısı döner', async () => {
+    const { db, ali } = await league();
+    const { rows } = await asUser(
+      db,
+      ali,
+      'select display_name, points, rank, total_count, is_me from public.get_national_leaderboard()',
+    );
+
+    assert.deepEqual(rows, [
+      { display_name: 'Burak', points: 9, rank: 1, total_count: 3, is_me: false },
+      { display_name: 'Ali', points: 5, rank: 2, total_count: 3, is_me: true },
+      { display_name: 'Can', points: 0, rank: 3, total_count: 3, is_me: false },
+    ]);
+  });
+
+  test('haftalık: yalnızca o haftanın puanları', async () => {
+    const { db, ali } = await league();
+    const { rows } = await asUser(
+      db,
+      ali,
+      'select display_name, points, rank from public.get_national_leaderboard(1)',
+    );
+
+    assert.deepEqual(rows, [
+      { display_name: 'Ali', points: 5, rank: 1 },
+      { display_name: 'Burak', points: 4, rank: 2 },
+      { display_name: 'Can', points: 0, rank: 3 },
+    ]);
+  });
+
+  test('ilk N listesinde olmasan da kendi satırın gelir', async () => {
+    const { db, can } = await league();
+    const { rows } = await asUser(
+      db,
+      can,
+      'select display_name, rank, is_me from public.get_national_leaderboard(null, 1)',
+    );
+
+    assert.deepEqual(rows, [
+      { display_name: 'Burak', rank: 1, is_me: false },
+      { display_name: 'Can', rank: 3, is_me: true },
+    ]);
+  });
+
+  test('hiç puanlanmış tahmini olmayan kullanıcı sıralamada yer almaz', async () => {
+    const { db, emre } = await league();
+    const { rows } = await asUser(
+      db,
+      emre,
+      'select count(*) filter (where is_me)::int as mine from public.get_national_leaderboard()',
+    );
+    assert.equal(rows[0].mine, 0);
+  });
+});
+
+describe('profil istatistikleri ve tahmin geçmişi', () => {
+  const finish = (db, matchId, home, away) =>
+    db.query(
+      "update public.matches set kickoff_at = now() - interval '2 hours', status = 'finished', home_score = $2, away_score = $3 where id = $1",
+      [matchId, home, away],
+    );
+
+  test('istatistikler: puan, tahmin, tam skor, doğru sonuç, doğruluk, sezon sırası', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const ali = await signUp(db, 'ali');
+    const burak = await signUp(db, 'burak');
+    const m1 = await createMatch(db, seed, 60);
+    const m2 = await createMatch(db, seed, 90);
+    const m3 = await createMatch(db, seed, 120);
+    const pending = await createMatch(db, seed, 600);
+
+    await insertPrediction(db, ali, m1, 2, 1); // 5
+    await insertPrediction(db, ali, m2, 3, 1); // 2-1 bitecek: 3
+    await insertPrediction(db, ali, m3, 0, 2); // 1-0 bitecek: 0
+    await insertPrediction(db, ali, pending, 1, 1); // henüz oynanmadı
+    await insertPrediction(db, burak, m1, 2, 1); // 5
+    await insertPrediction(db, burak, m2, 2, 1); // 5
+    await finish(db, m1, 2, 1);
+    await finish(db, m2, 2, 1);
+    await finish(db, m3, 1, 0);
+
+    const { rows } = await asUser(db, ali, 'select * from public.get_my_stats()');
+    assert.deepEqual(rows[0], {
+      season_points: 8,
+      prediction_count: 4,
+      scored_count: 3,
+      exact_count: 1,
+      outcome_count: 2,
+      accuracy_percent: 67,
+      last_five_rounds_points: 8,
+      season_rank: 2,
+      season_total: 2,
+    });
+  });
+
+  test('hiç tahmini olmayan kullanıcıda istatistikler sıfır, doğruluk ve sıra boş', async () => {
+    const db = await createTestDb();
+    await seedLeague(db);
+    const ali = await signUp(db, 'ali');
+    const { rows } = await asUser(
+      db,
+      ali,
+      'select season_points, prediction_count, accuracy_percent, season_rank from public.get_my_stats()',
+    );
+    assert.deepEqual(rows[0], {
+      season_points: 0,
+      prediction_count: 0,
+      accuracy_percent: null,
+      season_rank: null,
+    });
+  });
+
+  test('geçmiş: yalnızca kendi tahminlerin, en yeni maç önce, tahmin zamanıyla', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const ali = await signUp(db, 'ali');
+    const burak = await signUp(db, 'burak');
+    const early = await createMatch(db, seed, 60);
+    const late = await createMatch(db, seed, 300);
+    await insertPrediction(db, ali, early, 1, 0);
+    await insertPrediction(db, ali, late, 2, 2);
+    await insertPrediction(db, burak, late, 0, 0);
+    await finish(db, early, 1, 0);
+
+    const { rows } = await asUser(
+      db,
+      ali,
+      'select match_id, predicted_home, predicted_away, points, home_team_short, predicted_at is not null as has_time from public.get_my_prediction_history()',
+    );
+    assert.deepEqual(rows, [
+      { match_id: late, predicted_home: 2, predicted_away: 2, points: null, home_team_short: 'GS', has_time: true },
+      { match_id: early, predicted_home: 1, predicted_away: 0, points: 5, home_team_short: 'GS', has_time: true },
+    ]);
+  });
+});
+
+describe('hesap silme', () => {
+  test('giriş bilgisi silinir; profil anonimleşir; tahminler kalır; sıralamada görünmez', async () => {
+    const db = await createTestDb();
+    const seed = await seedLeague(db);
+    const ali = await signUp(db, 'ali', 'Ali');
+    const burak = await signUp(db, 'burak', 'Burak');
+    const matchId = await createMatch(db, seed, 60);
+    await insertPrediction(db, ali, matchId, 2, 1);
+    await insertPrediction(db, burak, matchId, 1, 1);
+    await db.query(
+      "update public.matches set kickoff_at = now() - interval '2 hours', status = 'finished', home_score = 2, away_score = 1 where id = $1",
+      [matchId],
+    );
+
+    await asUser(db, ali, 'select public.delete_my_account()');
+
+    const auth = await db.query('select count(*)::int as count from auth.users where id = $1', [ali]);
+    const profile = await db.query(
+      'select username, display_name, deleted_at is not null as deleted from public.profiles where id = $1',
+      [ali],
+    );
+    const predictions = await db.query('select count(*)::int as count from public.predictions where user_id = $1', [
+      ali,
+    ]);
+    const ranking = await asUser(db, burak, 'select display_name from public.get_national_leaderboard()');
+
+    assert.equal(auth.rows[0].count, 0);
+    assert.match(profile.rows[0].username, /^silinmis_[0-9a-f]{8}$/);
+    assert.equal(profile.rows[0].display_name, 'Silinmiş Kullanıcı');
+    assert.equal(profile.rows[0].deleted, true);
+    assert.equal(predictions.rows[0].count, 1);
+    assert.deepEqual(ranking.rows, [{ display_name: 'Burak' }]);
+  });
+
+  test('kurduğu oda en eski üyeye devredilir; tek başına olduğu oda silinir', async () => {
+    const db = await createTestDb();
+    const ali = await signUp(db, 'ali');
+    const burak = await signUp(db, 'burak');
+    const can = await signUp(db, 'can');
+    const shared = await createRoom(db, ali, 'ABC234', [burak, can]);
+    const alone = await createRoom(db, ali, 'XYZ789');
+
+    await asUser(db, ali, 'select public.delete_my_account()');
+
+    const rooms = await db.query('select id, owner_id from public.rooms order by code');
+    assert.deepEqual(rooms.rows, [{ id: shared, owner_id: burak }]);
+    const members = await db.query('select user_id from public.room_members where room_id = $1 order by joined_at', [
+      shared,
+    ]);
+    assert.deepEqual(
+      members.rows.map((row) => row.user_id),
+      [burak, can],
+    );
+    assert.ok(!rooms.rows.some((row) => row.id === alone));
+  });
+
+  test('giriş yapmamış biri çağıramaz', async () => {
+    const db = await createTestDb();
+    await assert.rejects(asAnon(db, 'select public.delete_my_account()'), PERMISSION_DENIED);
+  });
+});
+
 describe('puan ayarları', () => {
   test('varsayılan değerler 5/3/1 ve tabloda tek satır olabilir', async () => {
     const db = await createTestDb();

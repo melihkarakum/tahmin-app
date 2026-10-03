@@ -4,6 +4,8 @@ import { describe, test } from 'node:test';
 
 import {
   hasApiErrors,
+  isProviderLogoUrl,
+  logoPath,
   mapStatus,
   parseRound,
   resolveResult,
@@ -97,5 +99,22 @@ describe('futbol API dönüşümleri', () => {
     assert.equal(hasApiErrors({}), false);
     assert.equal(hasApiErrors({ plan: 'Free plans do not have access to this season' }), true);
     assert.equal(hasApiErrors(['token']), true);
+  });
+
+  test('logo yalnızca futbol API görsel sunucusundan kopyalanır', () => {
+    assert.equal(isProviderLogoUrl('https://media.api-sports.io/football/teams/645.png'), true);
+    assert.equal(isProviderLogoUrl('http://media.api-sports.io/football/teams/645.png'), false);
+    assert.equal(isProviderLogoUrl('https://media.api-sports.io.evil.com/645.png'), false);
+    assert.equal(isProviderLogoUrl('https://169.254.169.254/latest'), false);
+    assert.equal(isProviderLogoUrl('not a url'), false);
+    assert.equal(isProviderLogoUrl(null), false);
+  });
+
+  test('logo dosya yolu güvenli biçimde oluşur', () => {
+    assert.equal(logoPath('api-football', '645', 'image/png'), 'api-football/645.png');
+    assert.equal(logoPath('api-football', '645', 'image/jpeg; charset=binary'), 'api-football/645.jpg');
+    assert.equal(logoPath('api-football', '645', 'text/html'), null);
+    assert.equal(logoPath('api-football', '../645', 'image/png'), null);
+    assert.equal(logoPath('api/football', '645', 'image/png'), null);
   });
 });

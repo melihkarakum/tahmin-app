@@ -2,10 +2,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/features/auth/auth-provider';
 import { supabase } from '@/lib/supabase';
-import type { Match, MatchStatus, Prediction, ResultType } from '@/types/domain';
+import { teamLogoUrl } from '@/lib/team-logo';
+import type { Match, MatchStatus, Prediction, ResultType, Team } from '@/types/domain';
 
 const MATCH_COLUMNS =
-  'id, round, kickoff_at, status, home_score, away_score, provider, home:teams!matches_home_team_id_fkey(id, name, short_name), away:teams!matches_away_team_id_fkey(id, name, short_name)';
+  'id, round, kickoff_at, status, home_score, away_score, provider, home:teams!matches_home_team_id_fkey(id, name, short_name, logo_path), away:teams!matches_away_team_id_fkey(id, name, short_name, logo_path)';
+
+type TeamRow = { id: number; name: string; short_name: string; logo_path: string | null };
+
+function toTeam(row: TeamRow): Team {
+  return { id: row.id, name: row.name, shortName: row.short_name, logoUrl: teamLogoUrl(row.logo_path) };
+}
 
 /** Güncel sezon ve hafta (sunucudaki current_round fonksiyonu belirler). */
 export function useCurrentRound() {
@@ -58,8 +65,8 @@ export function useRoundMatches(seasonId: number | undefined, round: number | un
         homeScore: row.home_score,
         awayScore: row.away_score,
         isTest: row.provider === 'test',
-        home: { id: row.home.id, name: row.home.name, shortName: row.home.short_name },
-        away: { id: row.away.id, name: row.away.name, shortName: row.away.short_name },
+        home: toTeam(row.home),
+        away: toTeam(row.away),
       }));
     },
   });

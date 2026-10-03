@@ -5,6 +5,8 @@ export type Team = {
   id: number;
   name: string;
   shortName: string;
+  /** Logo adresi; yoksa ya da yüklenemezse kulüp renklerinde rozet gösterilir. */
+  logoUrl?: string | null;
 };
 
 export type MatchStatus = 'scheduled' | 'live' | 'finished' | 'postponed' | 'cancelled';
@@ -45,33 +47,36 @@ export type LeaderboardRow = {
 
 export type LeaderboardScope = 'week' | 'season';
 
-export type Room = {
-  id: string;
-  name: string;
-  code: string;
-  memberCount: number;
-  myRank: number;
-  leaderName: string;
-};
-
 export type ProfileStats = {
   seasonPoints: number;
+  /** Bu sezon yapılan tüm tahminler (henüz oynanmamış maçlar dahil). */
   predictionCount: number;
+  /** Puanlanmış (maçı bitmiş) tahmin sayısı. */
+  scoredCount: number;
   exactCount: number;
+  /** Doğru sonuç sayısı (tam skorlar dahil). */
   outcomeCount: number;
-  accuracyPercent: number;
+  /** Puanlanmış tahminlerde doğru sonuç oranı; henüz puanlanan yoksa null. */
+  accuracyPercent: number | null;
   lastFiveRoundsPoints: number;
+  /** Türkiye sezon sırası; henüz sıralamada değilse null. */
+  seasonRank: number | null;
+  seasonTotal: number | null;
 };
 
 export type HistoryItem = {
-  id: string;
+  matchId: number;
+  round: number;
+  kickoffAt: string;
+  status: MatchStatus;
   home: Team;
   away: Team;
-  homeScore: number;
-  awayScore: number;
+  homeScore: number | null;
+  awayScore: number | null;
   predictedHome: number;
   predictedAway: number;
-  points: number;
-  resultType: ResultType;
-  round: number;
+  points: number | null;
+  resultType: ResultType | null;
+  /** Tahminin en son kaydedildiği an (sunucu saati). */
+  predictedAt: string;
 };

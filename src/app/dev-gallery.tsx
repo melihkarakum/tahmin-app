@@ -2,23 +2,59 @@ import { Redirect } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
+import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
 import { Text } from '@/components/ui/text';
+import { TextField } from '@/components/ui/text-field';
 import { RankRow } from '@/features/leaderboard/components/rank-row';
 import { MatchCard } from '@/features/matches/components/match-card';
 import { WeekCard } from '@/features/matches/components/week-card';
 import { WeekPickerSheet } from '@/features/matches/components/week-picker-sheet';
 import { useNow } from '@/hooks/use-now';
-import { getRoomLeaderboard } from '@/mocks/data';
-import type { Match, Prediction, Team } from '@/types/domain';
+import {
+  NotificationSettingsCard,
+  PermissionNotice,
+} from '@/features/notifications/components/notification-settings-card';
+import { HistoryRow } from '@/features/profile/components/history-row';
+import { teamLogoUrl } from '@/lib/team-logo';
+import type { HistoryItem, LeaderboardRow, Match, Prediction, Team } from '@/types/domain';
 
 // YALNIZCA GELİŞTİRME: tasarımı giriş yapmadan görmek için kartların tüm durumları, örnek veriyle.
 // Yayın sürümünde açılmaz (ana sayfaya yönlendirir). Adres: /dev-gallery
 
 const HOUR = 60 * 60 * 1000;
 
-const team = (id: number, name: string, shortName: string): Team => ({ id, name, shortName });
+// Örnek takımlar gerçek depodaki logoları kullanır (futbol API kimliğiyle). Kimliği olmayan
+// takım, logo bulunamayınca gösterilen renkli rozeti denemek içindir.
+const PROVIDER_IDS: Record<string, number> = {
+  Galatasaray: 645,
+  Fenerbahçe: 611,
+  Antalyaspor: 1005,
+  Rizespor: 1007,
+  Beşiktaş: 549,
+  Başakşehir: 564,
+  Samsunspor: 3603,
+  Göztepe: 994,
+  Trabzonspor: 998,
+  Konyaspor: 607,
+  Kasımpaşa: 1004,
+  Alanyaspor: 996,
+  Eyüpspor: 3588,
+  Sivasspor: 1002,
+  'Adana Demirspor': 3563,
+};
+
+const team = (id: number, name: string, shortName: string): Team => {
+  const providerId = PROVIDER_IDS[name];
+  return {
+    id,
+    name,
+    shortName,
+    logoUrl: providerId ? teamLogoUrl(`api-football/${providerId}.png`) : null,
+  };
+};
 
 function buildSamples(now: number): { match: Match; prediction?: Prediction }[] {
   const at = (hours: number) => new Date(now + hours * HOUR).toISOString();
@@ -87,11 +123,52 @@ function buildSamples(now: number): { match: Match; prediction?: Prediction }[] 
 
 const SAMPLE_ROUNDS = Array.from({ length: 38 }, (_, index) => index + 1);
 
+const SAMPLE_HISTORY: HistoryItem[] = [
+  {
+    matchId: 1,
+    round: 8,
+    kickoffAt: '2026-10-02T17:00:00Z',
+    status: 'finished',
+    home: { id: 1, name: 'Samsunspor', shortName: 'SAM' },
+    away: { id: 2, name: 'Göztepe', shortName: 'GOZ' },
+    homeScore: 1,
+    awayScore: 1,
+    predictedHome: 1,
+    predictedAway: 1,
+    points: 5,
+    resultType: 'exact',
+    predictedAt: '2026-10-02T15:42:00Z',
+  },
+  {
+    matchId: 2,
+    round: 8,
+    kickoffAt: '2026-10-05T17:00:00Z',
+    status: 'scheduled',
+    home: { id: 3, name: 'Gaziantep FK', shortName: 'GAZ' },
+    away: { id: 4, name: 'Kayserispor', shortName: 'KAY' },
+    homeScore: null,
+    awayScore: null,
+    predictedHome: 2,
+    predictedAway: 1,
+    points: null,
+    resultType: null,
+    predictedAt: '2026-10-03T14:08:00Z',
+  },
+];
+
+const SAMPLE_ROWS: LeaderboardRow[] = [
+  { rank: 1, userId: 'a', displayName: 'Burak', points: 11, exactCount: 1 },
+  { rank: 2, userId: 'b', displayName: 'Ahmet', points: 9, exactCount: 1 },
+  { rank: 3, userId: 'c', displayName: 'Melih', points: 8, exactCount: 1, isMe: true },
+  { rank: 4, userId: 'd', displayName: 'Emre', points: 7, exactCount: 0 },
+];
+
 export default function DevGallery() {
   const now = useNow();
   const [samples] = useState(() => buildSamples(Date.now()));
   const [round, setRound] = useState(8);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   if (!__DEV__) return <Redirect href="/" />;
 
@@ -126,6 +203,18 @@ export default function DevGallery() {
         onClose={() => setPickerOpen(false)}
       />
 
+      <View className="mt-3">
+        <Button label="Panel örneği (Koda katıl)" variant="secondary" onPress={() => setSheetOpen(true)} />
+      </View>
+      <BottomSheet
+        visible={sheetOpen}
+        title="Koda katıl"
+        onClose={() => setSheetOpen(false)}
+        subtitle={<Text className="text-xs text-muted">Arkadaşının paylaştığı 6 karakterlik kodu gir.</Text>}>
+        <TextField label="Oda kodu" placeholder="HT42K9" maxLength={6} style={{ letterSpacing: 4 }} />
+        <Button label="Katıl" onPress={() => setSheetOpen(false)} style={{ marginTop: 16 }} />
+      </BottomSheet>
+
       <SectionTitle title="Maç kartları" />
       <View className="gap-3">
         {samples.map(({ match, prediction }) => (
@@ -133,13 +222,25 @@ export default function DevGallery() {
         ))}
       </View>
 
+      <SectionTitle title="Tahmin geçmişi" />
+      <View className="overflow-hidden rounded-3xl border border-border bg-surface">
+        {SAMPLE_HISTORY.map((item, index) => (
+          <HistoryRow key={item.matchId} item={item} isLast={index === SAMPLE_HISTORY.length - 1} />
+        ))}
+      </View>
+
+      <SectionTitle title="Bildirimler" />
+      <NotificationSettingsCard />
+      <View className="mt-3 overflow-hidden rounded-3xl border border-border bg-surface">
+        <PermissionNotice status="undetermined" onEnable={() => {}} isEnabling={false} failed />
+        <PermissionNotice status="denied" onEnable={() => {}} isEnabling={false} failed={false} />
+      </View>
+
       <SectionTitle title="Sıralama satırları" />
       <View className="overflow-hidden rounded-3xl border border-border bg-surface">
-        {getRoomLeaderboard('week')
-          .slice(0, 4)
-          .map((row, index) => (
-            <RankRow key={row.userId} row={row} isLast={index === 3} />
-          ))}
+        {SAMPLE_ROWS.map((row, index) => (
+          <RankRow key={row.userId} row={row} isLast={index === SAMPLE_ROWS.length - 1} />
+        ))}
       </View>
     </Screen>
   );

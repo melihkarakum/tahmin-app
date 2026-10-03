@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 
 import { Avatar } from '@/components/ui/avatar';
+import { PressableOpacity } from '@/components/ui/pressable-opacity';
 import { Text } from '@/components/ui/text';
 import { medalColors, tabularNums } from '@/constants/theme';
 import { formatNumber } from '@/lib/format';
@@ -9,14 +10,17 @@ import type { LeaderboardRow } from '@/types/domain';
 type RankRowProps = {
   row: LeaderboardRow;
   isLast?: boolean;
+  /** Verilirse satıra dokunulabilir (örneğin oda sahibinin üye çıkarması). */
+  onPress?: () => void;
 };
 
-export function RankRow({ row, isLast = false }: RankRowProps) {
+export function RankRow({ row, isLast = false, onPress }: RankRowProps) {
   const borderClass = isLast ? '' : 'border-b border-border';
   const backgroundClass = row.isMe ? 'bg-primary-soft' : '';
-  const medal = row.rank <= 3 ? medalColors[row.rank as 1 | 2 | 3] : null;
+  // Madalya yalnızca puan alanlara: herkes 0'dayken herkes "1." olur, madalya anlamsız kalır.
+  const medal = row.points > 0 && row.rank <= 3 ? medalColors[row.rank as 1 | 2 | 3] : null;
 
-  return (
+  const content = (
     <View className={`flex-row items-center px-4 py-3 ${borderClass} ${backgroundClass}`}>
       <View className="w-10">
         {medal ? (
@@ -46,5 +50,12 @@ export function RankRow({ row, isLast = false }: RankRowProps) {
       </Text>
       <Text className="ml-1 text-xs text-muted">puan</Text>
     </View>
+  );
+
+  if (!onPress) return content;
+  return (
+    <PressableOpacity onPress={onPress} accessibilityLabel={`${row.displayName} seçenekleri`}>
+      {content}
+    </PressableOpacity>
   );
 }

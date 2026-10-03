@@ -126,6 +126,32 @@ export function toMatchRow(
   };
 }
 
+const LOGO_HOST = 'media.api-sports.io';
+const LOGO_EXTENSIONS: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+};
+
+/** Logo yalnızca futbol API'sinin görsel sunucusundan (https) kopyalanır; başka adrese istek atılmaz. */
+export function isProviderLogoUrl(url: string | null | undefined): url is string {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' && parsed.hostname === LOGO_HOST;
+  } catch {
+    return false;
+  }
+}
+
+/** Depodaki logo dosyasının yolu: ("api-football", "645", "image/png") -> "api-football/645.png" */
+export function logoPath(provider: string, providerId: string, contentType: string): string | null {
+  const extension = LOGO_EXTENSIONS[contentType.split(';')[0].trim().toLowerCase()];
+  const safe = /^[A-Za-z0-9_-]+$/;
+  if (!extension || !safe.test(provider) || !safe.test(providerId)) return null;
+  return `${provider}/${providerId}.${extension}`;
+}
+
 /** API-Football yanıtında hata var mı? (errors alanı boş dizi ya da dolu nesne olabilir) */
 export function hasApiErrors(errors: unknown): boolean {
   if (Array.isArray(errors)) return errors.length > 0;

@@ -16,7 +16,19 @@ import { useEffect } from 'react';
 import { fonts } from '@/constants/fonts';
 import { colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
+import { useNotificationRouting, usePushRegistration } from '@/features/notifications/push';
 import { queryClient } from '@/lib/query-client';
+
+// Alt sayfalar (oda, tahmin geçmişi): yalnızca geri oku olan sade başlık.
+const detailHeader = {
+  headerShown: true,
+  title: '',
+  headerBackButtonDisplayMode: 'minimal' as const,
+  headerShadowVisible: false,
+  headerStyle: { backgroundColor: colors.background },
+  headerTintColor: colors.ink,
+  headerTitleStyle: { fontFamily: fonts.bold },
+};
 
 // Yazı tipleri yüklenip kayıtlı oturum okunana kadar açılış ekranı açık kalır;
 // böylece ne sistem yazı tipi bir an görünür ne de giriş ekranı bir an görünüp kaybolur.
@@ -49,6 +61,9 @@ function RootNavigator() {
     if (isReady) SplashScreen.hide();
   }, [isReady]);
 
+  usePushRegistration(session?.user.id);
+  useNotificationRouting(isReady && isSignedIn);
+
   if (!isReady) return null;
 
   return (
@@ -61,18 +76,8 @@ function RootNavigator() {
         }}>
         <Stack.Protected guard={isSignedIn}>
           <Stack.Screen name="(tabs)" />
-          <Stack.Screen
-            name="room/[id]"
-            options={{
-              headerShown: true,
-              title: '',
-              headerBackButtonDisplayMode: 'minimal',
-              headerShadowVisible: false,
-              headerStyle: { backgroundColor: colors.background },
-              headerTintColor: colors.ink,
-              headerTitleStyle: { fontFamily: fonts.bold },
-            }}
-          />
+          <Stack.Screen name="room/[id]" options={detailHeader} />
+          <Stack.Screen name="history" options={detailHeader} />
         </Stack.Protected>
 
         <Stack.Protected guard={!isSignedIn}>

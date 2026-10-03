@@ -11,6 +11,7 @@ import { ScoreStepper } from '@/features/matches/components/score-stepper';
 import { TeamCrest } from '@/features/matches/components/team-crest';
 import { getMatchPhase, type MatchPhase } from '@/features/matches/phase';
 import { toPredictionMessage, useSavePrediction } from '@/features/matches/queries';
+import { maybeOfferPush } from '@/features/notifications/push';
 import { formatCountdown, formatDay, formatTime, resultLabels } from '@/lib/format';
 import { trUpper } from '@/lib/text';
 import type { Match, Prediction, Team } from '@/types/domain';
@@ -37,7 +38,10 @@ export function MatchCard({ match, prediction, now }: MatchCardProps) {
     savePrediction.mutate(
       { matchId: match.id, homeGoals, awayGoals },
       {
-        onSuccess: () => setEditing(false),
+        onSuccess: () => {
+          setEditing(false);
+          void maybeOfferPush();
+        },
         onError: (saveError) => setError(toPredictionMessage(saveError)),
       },
     );
@@ -116,7 +120,7 @@ export function MatchCard({ match, prediction, now }: MatchCardProps) {
 function TeamSide({ team }: { team: Team }) {
   return (
     <View className="flex-1 items-center">
-      <TeamCrest name={team.name} shortName={team.shortName} />
+      <TeamCrest name={team.name} shortName={team.shortName} logoUrl={team.logoUrl} />
       <Text className="mt-2 text-center text-sm font-bold text-ink" numberOfLines={1}>
         {team.name}
       </Text>

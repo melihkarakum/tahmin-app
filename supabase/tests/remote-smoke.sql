@@ -15,7 +15,11 @@ declare
   v_past_match bigint;
   v_future_match bigint;
   v_room uuid;
+  v_new_room uuid;
+  v_new_code text;
+  v_status text;
   v_count int;
+  v_count_after int;
   passed text[] := '{}';
   failed text[] := '{}';
 begin
@@ -235,6 +239,138 @@ begin
     failed := failed || 'puanlamayı kullanıcı tetikleyemez'::text;
   exception when insufficient_privilege then
     passed := passed || 'puanlamayı kullanıcı tetikleyemez'::text;
+  end;
+
+  -- 14) Oda kurma ve kodla katılma ---------------------------------------------------------
+  begin
+    set local role authenticated;
+    perform set_config('request.jwt.claims', json_build_object('sub', melih, 'role', 'authenticated')::text, true);
+    select r.id, r.code into v_new_room, v_new_code from public.create_room('Smoke Yeni Oda') r;
+    perform set_config('request.jwt.claims', json_build_object('sub', yabanci, 'role', 'authenticated')::text, true);
+    select j.status into v_status from public.join_room(lower(v_new_code)) j;
+    reset role;
+    if v_status = 'joined'
+       and (select count(*) from public.room_members where room_id = v_new_room) = 2 then
+      passed := passed || 'oda kurma ve kodla katılma'::text;
+    else
+      failed := failed || ('oda kurma ve kodla katılma: ' || coalesce(v_status, 'durum yok'));
+    end if;
+  exception when others then
+    failed := failed || ('oda kurma ve kodla katılma: ' || sqlerrm);
+  end;
+
+  -- 15) Oda sıralaması üyeye açık, üye olmayana kapalı --------------------------------------
+  begin
+    set local role authenticated;
+    perform set_config('request.jwt.claims', json_build_object('sub', yabanci, 'role', 'authenticated')::text, true);
+    select count(*) into v_count from public.get_room_leaderboard(v_new_room);
+    perform set_config('request.jwt.claims', json_build_object('sub', burak, 'role', 'authenticated')::text, true);
+    perform * from public.get_room_leaderboard(v_new_room);
+    reset role;
+    failed := failed || 'oda sıralaması üye olmayana kapalı'::text;
+  exception when others then
+    if sqlerrm like '%üyesi değilsin%' and v_count = 2 then
+      passed := passed || 'oda sıralaması üyeye açık, üye olmayana kapalı'::text;
+    else
+      failed := failed || ('oda sıralaması: ' || sqlerrm);
+    end if;
+  end;
+
+  -- 16) Odada yalnızca oda kurulduktan sonra başlayan maçlar sayılır -------------------------
+  -- Melih'in 5 puanlık maçı 2 saat önce başladı; "Smoke Oda" şimdi kuruldu, yani sayılmamalı.
+  -- Oda bir gün önce kurulmuş gibi yapılınca aynı maç sayılmalı. (Sezon geçici olarak güncel
+  -- yapılır; bloğun sonunda her şey geri alınır.)
+  begin
+    update public.seasons set is_current = false where is_current;
+    update public.seasons set is_current = true where id = v_season;
+    set local role authenticated;
+    perform set_config('request.jwt.claims', json_build_object('sub', melih, 'role', 'authenticated')::text, true);
+    select l.points into v_count from public.get_room_leaderboard(v_room) l where l.user_id = melih;
+    reset role;
+    update public.rooms set created_at = now() - interval '1 day' where id = v_room;
+    set local role authenticated;
+    perform set_config('request.jwt.claims', json_build_object('sub', melih, 'role', 'authenticated')::text, true);
+    select l.points into v_count_after from public.get_room_leaderboard(v_room) l where l.user_id = melih;
+    reset role;
+    if v_count = 0 and v_count_after = 5 then
+      passed := passed || 'odada yalnızca kuruluştan sonraki maçlar sayılır'::text;
+    else
+      failed := failed || format('oda kuruluş kuralı: önce=%s sonra=%s', v_count, v_count_after);
+    end if;
+  exception when others then
+    failed := failed || ('oda kuruluş kuralı: ' || sqlerrm);
+  end;
+
+  -- 17) Bildirim adresi fonksiyonla kaydedilir; tablo uygulamaya kapalı ------------------------
+  begin
+    set local role authenticated;
+    perform set_config('request.jwt.claims', json_build_object('sub', melih, 'role', 'authenticated')::text, true);
+    perform public.register_push_token('ExponentPushToken[smokesmokesmokesmoke]', 'ios');
+    reset role;
+    if exists (select 1 from public.push_tokens where token = 'ExponentPushToken[smokesmokesmokesmoke]' and user_id = melih) then
+      begin
+        set local role authenticated;
+        perform set_config('request.jwt.claims', json_build_object('sub', melih, 'role', 'authenticated')::text, true);
+        perform 1 from public.push_tokens limit 1;
+        reset role;
+        failed := failed || 'bildirim adresi tablosu uygulamaya kapalı'::text;
+      exception when insufficient_privilege then
+        passed := passed || 'bildirim adresi kaydı, tablo uygulamaya kapalı'::text;
+      end;
+    else
+      failed := failed || 'bildirim adresi kaydı'::text;
+    end if;
+  exception when others then
+    failed := failed || ('bildirim adresi: ' || sqlerrm);
+  end;
+
+  -- 18) Bildirim tercihi kaydedilir ve okunur -----------------------------------------------------
+  begin
+    set local role authenticated;
+    perform set_config('request.jwt.claims', json_build_object('sub', melih, 'role', 'authenticated')::text, true);
+    perform public.set_notification_settings(false, true);
+    select count(*) into v_count
+    from public.get_my_notification_settings() s
+    where s.match_reminders = false and s.round_results = true;
+    reset role;
+    if v_count = 1 then
+      passed := passed || 'bildirim tercihi kaydı'::text;
+    else
+      failed := failed || 'bildirim tercihi kaydı'::text;
+    end if;
+  exception when others then
+    failed := failed || ('bildirim tercihi: ' || sqlerrm);
+  end;
+
+  -- 19) Bildirim toplayıcıları uygulama kullanıcısına kapalı ---------------------------------------
+  begin
+    set local role authenticated;
+    perform set_config('request.jwt.claims', json_build_object('sub', melih, 'role', 'authenticated')::text, true);
+    perform * from public.collect_match_reminders(now(), true);
+    reset role;
+    failed := failed || 'bildirim toplayıcısı kullanıcıya kapalı'::text;
+  exception when insufficient_privilege then
+    passed := passed || 'bildirim toplayıcısı kullanıcıya kapalı'::text;
+  end;
+
+  -- 20) Hesap silme: giriş bilgisi silinir, profil anonimleşir, tahminler kalır -------------
+  begin
+    set local role authenticated;
+    perform set_config('request.jwt.claims', json_build_object('sub', yabanci, 'role', 'authenticated')::text, true);
+    perform public.delete_my_account();
+    reset role;
+    if not exists (select 1 from auth.users where id = yabanci)
+       and exists (
+         select 1 from public.profiles
+         where id = yabanci and display_name = 'Silinmiş Kullanıcı' and deleted_at is not null
+       )
+       and not exists (select 1 from public.room_members where user_id = yabanci) then
+      passed := passed || 'hesap silme ve anonimleştirme'::text;
+    else
+      failed := failed || 'hesap silme ve anonimleştirme'::text;
+    end if;
+  exception when others then
+    failed := failed || ('hesap silme: ' || sqlerrm);
   end;
 
   raise exception 'SMOKE geçen=% kalan=% | geçenler: % | kalanlar: %',

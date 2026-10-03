@@ -1,5 +1,6 @@
 import { isAuthError } from '@supabase/supabase-js';
 
+import { unregisterPush } from '@/features/notifications/push';
 import { supabase } from '@/lib/supabase';
 
 export const USERNAME_PATTERN = /^[a-z0-9_]{3,20}$/;
@@ -35,6 +36,8 @@ export async function signUp(input: SignUpInput): Promise<{ needsEmailConfirmati
 }
 
 export async function signOut(): Promise<void> {
+  // Bu cihaz artık bu hesabın bildirimlerini almasın (oturum kapanmadan önce silinmeli).
+  await unregisterPush();
   const { error } = await supabase.auth.signOut();
   if (error) throw error;
 }

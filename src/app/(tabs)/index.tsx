@@ -8,6 +8,7 @@ import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { MatchCard } from '@/features/matches/components/match-card';
 import { WeekCard } from '@/features/matches/components/week-card';
+import { useNationalLeaderboard } from '@/features/leaderboard/queries';
 import { WeekPickerSheet } from '@/features/matches/components/week-picker-sheet';
 import { getMatchPhase, sortMatchesForHome } from '@/features/matches/phase';
 import {
@@ -39,6 +40,8 @@ export default function HomeScreen() {
   const matches = matchesQuery.data ?? [];
   const predictionsQuery = useMyPredictions(matches.map((match) => match.id));
   const predictions = predictionsQuery.data ?? [];
+  // Hafta kartındaki "Sıran": o haftanın Türkiye sırası (yalnızca ilk kişi ve kendi satırın istenir).
+  const weekRankQuery = useNationalLeaderboard('week', selectedRound, 1);
 
   const isLoading =
     roundQuery.isLoading ||
@@ -66,6 +69,7 @@ export default function HomeScreen() {
       roundsQuery.refetch(),
       matchesQuery.refetch(),
       predictionsQuery.refetch(),
+      weekRankQuery.refetch(),
     ]);
     setRefreshing(false);
   };
@@ -98,6 +102,7 @@ export default function HomeScreen() {
             points={points}
             predicted={predictions.length}
             total={matches.length}
+            rank={weekRankQuery.data?.me?.rank}
             note={matches.length > 0 ? roundNote(matches, predictions, now) : ' '}
           />
         </View>

@@ -142,6 +142,48 @@ export type Database = {
           },
         ]
       }
+      notification_log: {
+        Row: {
+          created_at: string
+          kind: string
+          ref: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          kind: string
+          ref: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          kind?: string
+          ref?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_settings: {
+        Row: {
+          match_reminders: boolean
+          round_results: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          match_reminders?: boolean
+          round_results?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          match_reminders?: boolean
+          round_results?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       predictions: {
         Row: {
           away_goals: number
@@ -228,6 +270,82 @@ export type Database = {
           username?: string
         }
         Relationships: []
+      }
+      push_tickets: {
+        Row: {
+          created_at: string
+          id: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tickets_token_fkey"
+            columns: ["token"]
+            isOneToOne: false
+            referencedRelation: "push_tokens"
+            referencedColumns: ["token"]
+          },
+        ]
+      }
+      push_tokens: {
+        Row: {
+          created_at: string
+          last_seen_at: string
+          platform: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          last_seen_at?: string
+          platform: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          last_seen_at?: string
+          platform?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      room_join_failures: {
+        Row: {
+          attempted_at: string
+          id: number
+          user_id: string
+        }
+        Insert: {
+          attempted_at?: string
+          id?: never
+          user_id: string
+        }
+        Update: {
+          attempted_at?: string
+          id?: never
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_join_failures_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       room_members: {
         Row: {
@@ -357,6 +475,7 @@ export type Database = {
         Row: {
           created_at: string
           id: number
+          logo_path: string | null
           logo_url: string | null
           name: string
           provider: string
@@ -366,6 +485,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: never
+          logo_path?: string | null
           logo_url?: string | null
           name: string
           provider: string
@@ -375,6 +495,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: never
+          logo_path?: string | null
           logo_url?: string | null
           name?: string
           provider?: string
@@ -403,6 +524,42 @@ export type Database = {
           result_type: string
         }[]
       }
+      collect_match_reminders: {
+        Args: { p_dry_run?: boolean; p_now?: string }
+        Returns: {
+          body: string
+          title: string
+          tokens: string[]
+          url: string
+          user_id: string
+        }[]
+      }
+      collect_round_results: {
+        Args: { p_dry_run?: boolean; p_now?: string }
+        Returns: {
+          body: string
+          title: string
+          tokens: string[]
+          url: string
+          user_id: string
+        }[]
+      }
+      create_room: {
+        Args: { p_name: string }
+        Returns: {
+          code: string
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "rooms"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_round: {
         Args: never
         Returns: {
@@ -411,7 +568,101 @@ export type Database = {
           season_name: string
         }[]
       }
+      delete_my_account: { Args: never; Returns: undefined }
+      get_my_notification_settings: {
+        Args: never
+        Returns: {
+          match_reminders: boolean
+          round_results: boolean
+        }[]
+      }
+      get_my_prediction_history: {
+        Args: { p_limit?: number }
+        Returns: {
+          away_score: number
+          away_team_name: string
+          away_team_short: string
+          home_score: number
+          home_team_name: string
+          home_team_short: string
+          kickoff_at: string
+          match_id: number
+          points: number
+          predicted_at: string
+          predicted_away: number
+          predicted_home: number
+          result_type: string
+          round: number
+          status: string
+        }[]
+      }
+      get_my_rooms: {
+        Args: never
+        Returns: {
+          code: string
+          id: string
+          is_owner: boolean
+          leader_name: string
+          leader_points: number
+          member_count: number
+          my_rank: number
+          name: string
+        }[]
+      }
+      get_my_stats: {
+        Args: never
+        Returns: {
+          accuracy_percent: number
+          exact_count: number
+          last_five_rounds_points: number
+          outcome_count: number
+          prediction_count: number
+          scored_count: number
+          season_points: number
+          season_rank: number
+          season_total: number
+        }[]
+      }
+      get_national_leaderboard: {
+        Args: { p_limit?: number; p_round?: number }
+        Returns: {
+          display_name: string
+          exact_count: number
+          is_me: boolean
+          outcome_count: number
+          points: number
+          rank: number
+          scored_count: number
+          total_count: number
+          user_id: string
+          username: string
+        }[]
+      }
+      get_room_leaderboard: {
+        Args: { p_room_id: string; p_round?: number }
+        Returns: {
+          display_name: string
+          exact_count: number
+          outcome_count: number
+          points: number
+          rank: number
+          scored_count: number
+          user_id: string
+          username: string
+        }[]
+      }
       is_username_available: { Args: { candidate: string }; Returns: boolean }
+      join_room: {
+        Args: { p_code: string }
+        Returns: {
+          room_id: string
+          status: string
+        }[]
+      }
+      register_push_token: {
+        Args: { p_platform: string; p_token: string }
+        Returns: undefined
+      }
       save_prediction: {
         Args: { p_away_goals: number; p_home_goals: number; p_match_id: number }
         Returns: {
@@ -433,6 +684,11 @@ export type Database = {
         }
       }
       score_match: { Args: { p_match_id: number }; Returns: number }
+      set_notification_settings: {
+        Args: { p_match_reminders: boolean; p_round_results: boolean }
+        Returns: undefined
+      }
+      unregister_push_token: { Args: { p_token: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

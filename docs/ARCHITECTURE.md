@@ -118,10 +118,40 @@ Uygulamanın bilmesi gerekenler:
 - **Test haftaları:** `supabase/seed/test-extra-rounds.sql` 6., 7. (oynanmış) ve 9. (gelecek) haftayı ekler; var olan maçlara ve tahminlere dokunmaz.
 - **Test haftası (8.):** ücretli API planı alınana kadar `supabase/seed/test-round.sql` 9 deneme maçı ekler (`provider = 'test'`, uygulamada "TEST" etiketiyle görünür). Tekrar çalıştırılabilir; maç saatleri çalıştırıldığı ana göre yeniden kurulur. **Gerçek veriye geçmeden önce silinmeli** (komut dosyanın başında).
 
+## Odalar, sıralama, profil (FAZ 10-12)
+
+- `create_room`, `join_room`: oda kodu `gen_random_uuid()` kaynaklı güçlü rastgelelikle, 32 karakterlik alfabeden (0/O, 1/I yok) 6 karakter. Yanlış kod denemeleri `room_join_failures` tablosunda tutulur; 15 dakikada 10 yanlıştan sonra katılma geçici durur. Sınırlar: 10 kurulan oda, 20 üyelik, oda başına 50 üye.
+- `get_room_leaderboard(oda, hafta?)`, `get_national_leaderboard(hafta?, sayı?)`, `get_my_rooms()`: sıralamalar okuma anında hesaplanır; sıra = puan, sonra tam skor, sonra doğru sonuç; eşitlere aynı sıra. Türkiye sıralamasına yalnızca puanlanmış tahmini olanlar girer.
+- **Oda puanı kuralı (kullanıcı kararı, 2026-10-04):** tahmin kullanıcıya aittir ve tüm odalarda geçerlidir; ancak bir odanın haftalık ve sezon sıralamasında yalnızca **oda kurulduktan sonra başlayan** maçlar sayılır. Herkes aynı çizgiden başlar; sonradan katılan üye, oda kurulduktan sonraki maçlara (katılmadan önce bile) yaptığı tahminlerin puanını alır. Türkiye sıralaması bu kuraldan etkilenmez.
+- `get_my_stats()`, `get_my_prediction_history()`: kullanıcının kendi verisi (RLS ile).
+- `delete_my_account()`: giriş bilgileri `auth.users`'tan silinir; profil "Silinmiş Kullanıcı" olarak anonimleşir; tahminler kalır ama sıralamada görünmez; kurulan odalar en eski üyeye devredilir, tek kişilikse silinir.
+
+## Bildirimler (FAZ 13)
+
+- **Akış:** uygulama izin alınca cihazın Expo bildirim adresini `register_push_token` ile kaydeder (çıkışta `unregister_push_token`). `send-notifications` Edge Function'ı pg_cron ile 10 dakikada bir (xx:05, xx:15, …) çalışır; `collect_match_reminders` ve `collect_round_results` fonksiyonlarından kime ne gideceğini alır, Expo bildirim servisine 100'erli gruplar halinde yollar.
+- **Maç hatırlatması:** 60 dakika içinde başlayacak, tahmin yapılmamış maçlar; aynı anda birden fazlaysa tek bildirim. Her maç için kişi başına bir kez (`notification_log`).
+- **Hafta sonucu:** güncel sezonda oynanacak/oynanan maçı kalmayan ve son 3 gün içinde biten hafta; o haftada puanlanmış tahmini olanlara puan ve haftalık Türkiye sırası. Yalnızca 09:00-22:00 (Türkiye saati); gece biten haftanın bildirimi sabah gider.
+- **Tercihler:** `notification_settings` (satır yoksa ikisi de açık); Profil'deki anahtarlar `set_notification_settings` ile yazar.
+- **İzin:** ilk tahmin kaydedilince, telefonun izin penceresi hiç açılmadıysa önce uygulama içinde sorulur ("Şimdi değil" denirse en erken bir hafta sonra). Profil > Bildirimler'de "Bildirimleri Aç" / "Ayarları Aç".
+- **Cihaz temizliği:** Expo `DeviceNotRegistered` dönerse (uygulama silinmiş) adres silinir; gönderimden 15 dakika sonra makbuzlar da kontrol edilir (`push_tickets`). Hesap silinince adres, tercih ve kayıtlar `auth.users` silinmesiyle birlikte silinir.
+- **Elle deneme:** `?dryRun=1` (göndermez, kime ne gideceğini özetler), `?mode=test&username=…` (o kişinin cihazlarına deneme bildirimi). Her çağrı `x-sync-secret` ister.
+- **Sınır:** Android'de Expo Go uzaktan bildirim almıyor (SDK 53'ten beri); Android'de deneme için geliştirme ya da mağaza sürümü gerekir. iPhone'da Expo Go'da çalışır.
+- Expo hesabında "gelişmiş bildirim güvenliği" açılırsa `EXPO_ACCESS_TOKEN` sırrı eklenmeli (fonksiyon varsa kullanır).
+
+## Takım logoları
+
+- Futbol API'si her takım için logo adresi verir (`teams.logo_url`). `sync-matches` fonksiyonu logoyu **bir kez** indirip Supabase Storage'daki herkese açık `team-logos` deposuna kopyalar (`teams.logo_path`). Uygulama logoyu yalnızca bu depodan yükler: kullanıcıların cihazı futbol API'sinin sunucusuna bağlanmaz ve görsel sunucusunun hız sınırına takılınmaz.
+- Kopyalama `full` senkronunda kendiliğinden yapılır (yükselen yeni takımlar için). Elle çalıştırmak için: `?mode=logos`. Yalnızca `https://media.api-sports.io` adresinden, en fazla 256 KB'lık png/jpeg/webp kabul edilir.
+- Cihazda logolar diskte önbelleğe alınır (`expo-image`). Logo yoksa ya da yüklenemezse kulüp renklerinde rozet gösterilir.
+- **Logoları herkes için kapatmak** (hak sahibi itirazı ya da mağaza reddi): `update storage.buckets set public = false where id = 'team-logos';` Yeni uygulama sürümü gerekmez; uygulama logoyu yükleyemeyince rozete döner.
+- Logoların hakları kulüplere aittir. Futbol API'si logoları yalnızca tanıtım amacıyla verdiğini, hakların sahibi olmadığını ve kullanım için hak sahibinden izin gerekebileceğini belirtir. Yayından önce avukat görüşü şart (ROADMAP).
+
 ## Supabase güvenlik denetiminde bilinçli kabul edilen uyarılar
 
 - `is_username_available`: giriş yapmamış kullanıcı da çağırabilir; kayıt ekranının kullanıcı adı kontrolü için. Yalnızca evet/hayır döner.
 - `save_prediction`: giriş yapan kullanıcı çağırabilir; tahmin yazmanın tek yolu budur.
+- `create_room`, `join_room`, `get_room_leaderboard`, `get_my_rooms`, `get_national_leaderboard`, `delete_my_account`, `register_push_token`, `unregister_push_token`: giriş yapan kullanıcının çağırması için tasarlandı; her biri kimliği oturumdan alır ve yetkiyi kendi içinde denetler.
+- `room_join_failures`, `push_tokens`, `push_tickets`, `notification_log` tablolarında RLS açık ama kural yok ("RLS enabled, no policy" bilgisi): bilinçli; uygulama bu tablolara hiç erişemez, yalnızca sunucu fonksiyonları yazar.
 - Sızdırılmış şifre kontrolü (HaveIBeenPwned) kapalı: FAZ 17'de değerlendirilecek.
 
 ## Veritabanı testleri

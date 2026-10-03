@@ -1,4 +1,4 @@
-// Takım rozetleri için kulüp renkleri (logo yerine). Değerler yaklaşık renklerdir.
+// Logo yoksa ya da yüklenemezse gösterilen takım rozetleri için kulüp renkleri. Değerler yaklaşık renklerdir.
 // Listede olmayan takım için adından türetilen sabit bir renk kullanılır.
 
 type TeamColors = { primary: string; secondary: string };
