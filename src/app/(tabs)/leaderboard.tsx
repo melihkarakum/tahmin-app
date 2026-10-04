@@ -23,7 +23,7 @@ export default function LeaderboardScreen() {
   const [scope, setScope] = useState<LeaderboardScope>('week');
   const [refreshing, setRefreshing] = useState(false);
   const { data: current } = useCurrentRound();
-  const leaderboardQuery = useNationalLeaderboard(scope, current?.round);
+  const leaderboardQuery = useNationalLeaderboard(scope, current?.round, undefined, { keepPrevious: true });
   const leaderboard = leaderboardQuery.data;
 
   const refresh = async () => {
@@ -69,7 +69,9 @@ export default function LeaderboardScreen() {
         </View>
       ) : (
         <>
-          <View className="mt-4 overflow-hidden rounded-3xl border border-border bg-surface">
+          <View
+            className="mt-4 overflow-hidden rounded-3xl border border-border bg-surface"
+            style={{ opacity: leaderboardQuery.isPlaceholderData ? 0.5 : 1 }}>
             {leaderboard.top.map((row, index) => (
               <RankRow key={row.userId} row={row} isLast={index === leaderboard.top.length - 1} />
             ))}

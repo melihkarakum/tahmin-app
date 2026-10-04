@@ -1,16 +1,15 @@
 import { type ReactNode, useState } from 'react';
 import { View } from 'react-native';
 
-import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { PressableOpacity } from '@/components/ui/pressable-opacity';
 import { Text } from '@/components/ui/text';
 import { colors, tabularNums } from '@/constants/theme';
 import { PointsChip } from '@/features/matches/components/points-chip';
+import { PredictionButton, type PredictionButtonState } from '@/features/matches/components/prediction-button';
 import { ScoreStepper } from '@/features/matches/components/score-stepper';
 import { TeamCrest } from '@/features/matches/components/team-crest';
 import { getMatchPhase, type MatchPhase } from '@/features/matches/phase';
-import { toPredictionMessage, useSavePrediction } from '@/features/matches/queries';
+import { toPredictionShortMessage, useSavePrediction } from '@/features/matches/queries';
 import { maybeOfferPush } from '@/features/notifications/push';
 import { haptics } from '@/lib/haptics';
 import { formatCountdown, formatDay, formatTime, resultLabels } from '@/lib/format';
@@ -25,28 +24,47 @@ type MatchCardProps = {
 
 export function MatchCard({ match, prediction, now }: MatchCardProps) {
   const savePrediction = useSavePrediction();
-  const [homeGoals, setHomeGoals] = useState(prediction?.homeGoals ?? 0);
-  const [awayGoals, setAwayGoals] = useState(prediction?.awayGoals ?? 0);
-  const [editing, setEditing] = useState(prediction === undefined);
-  const [error, setError] = useState<string | null>(null);
+  // Kullanıcı skoru değiştirince taslak oluşur; kaydedilince taslak silinir ve kayıtlı tahmin görünür.
+  const [draft, setDraft] = useState<{ home: number; away: number } | null>(null);
+  const [errorText, setErrorText] = useState<string | null>(null);
 
   const phase = getMatchPhase(match, now);
-  const isEditing = phase === 'open' && editing;
   const msLeft = new Date(match.kickoffAt).getTime() - now;
 
+  const homeGoals = draft?.home ?? prediction?.homeGoals ?? 0;
+  const awayGoals = draft?.away ?? prediction?.awayGoals ?? 0;
+  const isDirty =
+    draft !== null &&
+    (prediction === undefined || draft.home !== prediction.homeGoals || draft.away !== prediction.awayGoals);
+
+  const buttonState: PredictionButtonState = savePrediction.isPending
+    ? 'saving'
+    : errorText
+      ? 'error'
+      : prediction === undefined
+        ? 'new'
+        : isDirty
+          ? 'dirty'
+          : 'saved';
+
+  const change = (home: number, away: number) => {
+    setErrorText(null);
+    setDraft({ home, away });
+  };
+
   const save = () => {
-    setError(null);
+    setErrorText(null);
     savePrediction.mutate(
       { matchId: match.id, homeGoals, awayGoals },
       {
         onSuccess: () => {
           haptics.success();
-          setEditing(false);
+          setDraft(null);
           void maybeOfferPush();
         },
         onError: (saveError) => {
           haptics.warning();
-          setError(toPredictionMessage(saveError));
+          setErrorText(toPredictionShortMessage(saveError));
         },
       },
     );
@@ -84,7 +102,8 @@ export function MatchCard({ match, prediction, now }: MatchCardProps) {
         <TeamSide team={match.away} />
       </View>
 
-      {isEditing ? (
+      {phase === 'open' ? (
+        // Açık maçta skor paneli ve düğme hep görünür: durum değişince kart büyüyüp küçülmez.
         <View className="mt-5">
           {/* Ortadaki ayraç dar tutulur; düğmeler en dar telefonda (375 px) bile yan yana sığar. */}
           <View className="rounded-2xl bg-surface-muted px-3 pb-4 pt-3">
@@ -93,30 +112,33 @@ export function MatchCard({ match, prediction, now }: MatchCardProps) {
             </Text>
             <View className="mt-3 flex-row items-center">
               <View className="flex-1 items-center">
-                <ScoreStepper value={homeGoals} onChange={setHomeGoals} teamName={match.home.name} />
+                <ScoreStepper
+                  value={homeGoals}
+                  onChange={(value) => change(value, awayGoals)}
+                  teamName={match.home.name}
+                />
               </View>
               <Text className="w-6 text-center text-xl font-bold text-muted">-</Text>
               <View className="flex-1 items-center">
-                <ScoreStepper value={awayGoals} onChange={setAwayGoals} teamName={match.away.name} />
+                <ScoreStepper
+                  value={awayGoals}
+                  onChange={(value) => change(homeGoals, value)}
+                  teamName={match.away.name}
+                />
               </View>
             </View>
           </View>
-          {error ? <Text className="mt-3 text-center text-sm text-danger">{error}</Text> : null}
-          <Button
-            label={
-              savePrediction.isPending
-                ? 'Kaydediliyor…'
-                : prediction
-                  ? 'Tahmini Güncelle'
-                  : 'Tahmini Kaydet'
-            }
-            onPress={save}
-            disabled={savePrediction.isPending}
-            style={{ marginTop: 14 }}
-          />
+          <View className="mt-3">
+            <PredictionButton
+              state={buttonState}
+              savedTime={prediction ? formatTime(prediction.updatedAt) : undefined}
+              errorText={errorText ?? undefined}
+              onPress={save}
+            />
+          </View>
         </View>
       ) : (
-        <PredictionStrip phase={phase} prediction={prediction} onEdit={() => setEditing(true)} />
+        <PredictionStrip phase={phase} prediction={prediction} />
       )}
     </View>
   );
@@ -192,37 +214,7 @@ function PredictionValue({ prediction }: { prediction?: Prediction }) {
   );
 }
 
-function PredictionStrip({
-  phase,
-  prediction,
-  onEdit,
-}: {
-  phase: MatchPhase;
-  prediction?: Prediction;
-  onEdit: () => void;
-}) {
-  if (phase === 'open') {
-    return (
-      <StripLayout
-        left={
-          <View>
-            <PredictionValue prediction={prediction} />
-            {prediction ? (
-              <Text className="mt-0.5 text-xs text-muted">
-                {formatTime(prediction.updatedAt)} itibarıyla kayıtlı
-              </Text>
-            ) : null}
-          </View>
-        }
-        right={
-          <PressableOpacity onPress={onEdit} hitSlop={10}>
-            <Text className="text-sm font-bold text-primary">Değiştir</Text>
-          </PressableOpacity>
-        }
-      />
-    );
-  }
-
+function PredictionStrip({ phase, prediction }: { phase: MatchPhase; prediction?: Prediction }) {
   if (phase === 'finished') {
     const scored = prediction && prediction.points !== null && prediction.resultType !== null;
     return (

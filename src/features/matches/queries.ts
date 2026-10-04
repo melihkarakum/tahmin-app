@@ -120,6 +120,19 @@ export function useSavePrediction() {
   });
 }
 
+/** Tahmin düğmesine sığan kısa hata ("· Tekrar dene" ile birlikte gösterilir). */
+export function toPredictionShortMessage(error: unknown): string {
+  const message =
+    typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message: unknown }).message)
+      : '';
+
+  if (message.includes('tahmin süresi doldu')) return 'Maç başladı';
+  if (message.includes('tahmin yapılamaz')) return 'Tahmin yapılamaz';
+  if (message.includes('fetch') || message.includes('Network')) return 'Bağlantı yok';
+  return 'Kaydedilemedi';
+}
+
 export function toPredictionMessage(error: unknown): string {
   const message =
     typeof error === 'object' && error !== null && 'message' in error

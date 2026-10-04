@@ -163,7 +163,16 @@ Uygulamanın bilmesi gerekenler:
 - `room_join_failures`, `push_tokens`, `push_tickets`, `notification_log` tablolarında RLS açık ama kural yok ("RLS enabled, no policy" bilgisi): bilinçli; uygulama bu tablolara hiç erişemez, yalnızca sunucu fonksiyonları yazar.
 - Sızdırılmış şifre kontrolü (HaveIBeenPwned) kapalı: FAZ 17'de değerlendirilecek.
 
-## Veritabanı testleri
+## Testler
+
+- **`npm test`**: aşağıdakilerin hepsi. GitHub'da her push'ta tip ve kod denetimiyle birlikte çalışır (`.github/workflows/ci.yml`).
+- **Veritabanı** (`supabase/tests`, `npm run test:db`): aşağıda.
+- **Yardımcılar** (`tests/*.test.mjs`): davet bağlantısı, süzgeçler, paylaşma metni; Node'un kendi test aracıyla.
+- **Arayüz** (`src/**/__tests__`, `npm run test:ui`): Jest (`jest-expo`) + React Native Testing Library 14 (`render`, `fireEvent` beklenir: `await`). Supabase ve titreşim `jest.setup.js` içinde sahtedir; testler ağa çıkmaz. Testler `src/app` içine konmaz (oradaki her dosya bir ekrandır).
+- **Gerçek projede güvenlik**: `supabase db query --linked -f supabase/tests/remote-smoke.sql` (veri bırakmaz).
+- **Telefonda**: `docs/TEST_PLAN.md`.
+
+### Veritabanı testleri
 
 `npm run test:db` komutu, migration dosyalarını bilgisayarda çalışan geçici bir Postgres'e (PGlite) kurar ve güvenlik kurallarını dener. Docker gerekmez. Supabase'e özgü roller ve `auth.uid()` için `supabase/tests/supabase-shim.sql` kullanılır; bu dosya yalnızca testler içindir, Supabase'e yüklenmez. Testler gerçek Supabase'in yerini tutmaz; her migration ayrıca gerçek projede de denenir.
 
@@ -210,7 +219,11 @@ Yalnızca ekran ve `_layout` dosyaları `src/app/` içinde durur; geri kalan kod
 - En dar desteklenen ekran 375 px (iPhone SE); düzenler 360 px'te de taşmadan çalışır.
 - **Yükleniyor durumu:** ortada dönen simge yerine içeriğin biçiminde yanıp sönen iskelet (`src/components/ui/skeleton.tsx`: `MatchCardSkeleton`, `RowsSkeleton`, `Skeleton`). "Hareketi azalt" açıksa yanıp sönmez.
 - **Dokunuş titreşimi:** `src/lib/haptics.ts` (`selection`, `success`, `warning`); web'de kapalı, hiçbir işlemi engellemez. Seçim değişiminde `selection`, kaydetme/katılma başarısında `success`, reddedilen işlemde `warning`.
-- **Oda ekranı:** davet alanı katlanır (odada tek başınaysan açık başlar); sıralamada puan alan varsa ilk üç kürsüde, kalanlar listede.
+- **Oda ekranı:** davet alanı katlanır (odada tek başınaysan açık başlar); sıralamada puan alan varsa ilk üç kürsüde, kalanlar listede. Kurucu, adın yanındaki kalemle oda adını değiştirir (kural sunucuda: RLS + 2-40 karakter).
+- **Ekran kaymaz:** kullanıcının dokunduğu bir şey listedeki kartı büyütüp küçültmez (maç kartında skor paneli açık maçta hep görünür; tahmin düğmesi her durumda aynı boyda). Basma animasyonları yalnızca transform/opaklıkla yapılır (`usePressScale`), düzeni etkilemez. Açılır-kapanır alanlar yalnızca kullanıcı açtığında büyür (oda davet alanı).
+- **Alttan açılan ekranlar** (paylaşma kartları, davet): telefonun başlık çubuğu ve sağ üstte her zaman kapat (X) (`HeaderCloseButton`).
+- **Profil (Instagram düzeni):** üstte kullanıcı adı ve ayarlar (dişli → `/settings`: bildirimler, çıkış, hesap silme); avatarın yanında Puan/Tahmin/Sıra; "Profili Düzenle" (görünen ad) ve "Profili Paylaş"; öne çıkan dört istatistik; "Skor Tahminlerim" süzgeçli ızgara (en fazla 6, devamı `/history`).
+- **Paylaşma kartları** (`src/features/share`): 360x640 tasarlanır, önizlemede ölçeklenir, `react-native-view-shot` ile 1080x1920 PNG yakalanıp `expo-sharing` ile telefonun paylaşma penceresine verilir (Instagram hikâye/DM, WhatsApp...). Metin olarak paylaşma da var. Kartta takım logoları `TeamCrest` ile gelir; logolar sunucudan kapatılırsa kartlar da renkli rozete döner.
 
 ## Stil kuralları
 

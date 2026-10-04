@@ -14,6 +14,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
 
+import { HeaderCloseButton } from '@/components/ui/header-close-button';
+
 import { fonts } from '@/constants/fonts';
 import { colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
@@ -34,6 +36,18 @@ const detailHeader = {
   headerStyle: { backgroundColor: colors.background },
   headerTintColor: colors.ink,
   headerTitleStyle: { fontFamily: fonts.bold },
+};
+
+// Alttan açılan ekranlar (paylaşma kartları, davet): başlık ve sağ üstte her zaman bir kapat (X).
+// Başlık çubuğu telefonun kendisinindir; çentik/üst boşluk sorunları olmaz.
+const closableHeader = {
+  headerShown: true,
+  headerBackVisible: false,
+  headerShadowVisible: false,
+  headerStyle: { backgroundColor: colors.background },
+  headerTintColor: colors.ink,
+  headerTitleStyle: { fontFamily: fonts.bold },
+  headerRight: () => <HeaderCloseButton />,
 };
 
 // Yazı tipleri yüklenip kayıtlı oturum okunana kadar açılış ekranı açık kalır;
@@ -71,8 +85,8 @@ function RootNavigator() {
   useNotificationRouting(isReady && isSignedIn);
   usePendingInviteRedirect(isReady && isSignedIn);
 
-  if (!isReady) return null;
-
+  // Hazır olana kadar açılış ekranı (splash) üstte kalır; gezinme ağacı ise ilk anda kurulur.
+  // null döndürülürse uygulamayı açan adres (davet bağlantısı gibi) kaybolup ana sayfaya düşüyordu.
   return (
     <>
       <StatusBar style="light" />
@@ -84,7 +98,17 @@ function RootNavigator() {
         <Stack.Protected guard={!isWebsite && isSignedIn}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="room/[id]" options={detailHeader} />
-          <Stack.Screen name="history" options={detailHeader} />
+          <Stack.Screen name="history" options={{ ...detailHeader, title: 'Skor Tahminlerim' }} />
+          <Stack.Screen name="settings" options={{ ...detailHeader, title: 'Ayarlar' }} />
+          {/* Paylaşma kartları alttan açılan sayfa olarak gelir. */}
+          <Stack.Screen
+            name="prediction/[matchId]"
+            options={{ ...closableHeader, presentation: 'modal', title: 'Tahminini paylaş' }}
+          />
+          <Stack.Screen
+            name="profile-card"
+            options={{ ...closableHeader, presentation: 'modal', title: 'Profilini paylaş' }}
+          />
         </Stack.Protected>
 
         <Stack.Protected guard={!isWebsite && !isSignedIn}>
@@ -92,7 +116,10 @@ function RootNavigator() {
         </Stack.Protected>
 
         {/* Davet bağlantısı: girişli de girişsiz de açılır (ekran kendisi yönetir). */}
-        <Stack.Screen name="davet" />
+        <Stack.Screen
+          name="davet"
+          options={isWebsite || Platform.OS === 'web' ? undefined : { ...closableHeader, title: '' }}
+        />
       </Stack>
     </>
   );

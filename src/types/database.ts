@@ -580,9 +580,11 @@ export type Database = {
         Args: { p_limit?: number }
         Returns: {
           away_score: number
+          away_team_logo: string
           away_team_name: string
           away_team_short: string
           home_score: number
+          home_team_logo: string
           home_team_name: string
           home_team_short: string
           kickoff_at: string

@@ -4,12 +4,14 @@ import { Alert, Linking, RefreshControl, Share, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { PressableOpacity } from '@/components/ui/pressable-opacity';
 import { Screen } from '@/components/ui/screen';
 import { RowsSkeleton, Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useCurrentRound } from '@/features/matches/queries';
+import { RenameRoomSheet } from '@/features/rooms/components/rename-room-sheet';
 import { RoomInviteCard } from '@/features/rooms/components/room-invite-card';
 import { RoomStandings } from '@/features/rooms/components/room-standings';
 import {
@@ -32,6 +34,7 @@ export default function RoomScreen() {
   const [refreshing, setRefreshing] = useState(false);
   // null: kullanıcı henüz dokunmadı. Odada tek başınaysan davet alanı açık başlar.
   const [inviteExpanded, setInviteExpanded] = useState<boolean | null>(null);
+  const [renameOpen, setRenameOpen] = useState(false);
 
   const roomQuery = useRoom(id);
   const room = roomQuery.data;
@@ -142,7 +145,16 @@ export default function RoomScreen() {
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />
       }>
-      <Text className="text-3xl font-extrabold text-ink">{room.name}</Text>
+      <View className="flex-row items-start gap-3">
+        <Text className="flex-1 text-3xl font-extrabold text-ink">{room.name}</Text>
+        {isOwner ? (
+          <PressableOpacity onPress={() => setRenameOpen(true)} hitSlop={10} accessibilityLabel="Oda adını düzenle">
+            <View className="mt-1 h-9 w-9 items-center justify-center rounded-full border border-border bg-surface">
+              <Icon name="edit" size={15} color={colors.ink} />
+            </View>
+          </PressableOpacity>
+        ) : null}
+      </View>
       <Text className="mt-1 text-sm font-medium text-muted">
         {rows.length > 0 ? `${rows.length} üye` : ' '}
         {isOwner ? ' · Kurucusun' : ''}
@@ -192,6 +204,13 @@ export default function RoomScreen() {
           <Button label="Odadan Ayrıl" variant="danger" onPress={confirmLeave} />
         )}
       </View>
+
+      <RenameRoomSheet
+        visible={renameOpen}
+        roomId={room.id}
+        currentName={room.name}
+        onClose={() => setRenameOpen(false)}
+      />
     </Screen>
   );
 }

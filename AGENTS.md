@@ -23,6 +23,7 @@ A social football score-prediction app (Turkish Süper Lig first, friend rooms, 
 - TextInput: no `lineHeight` (no `text-base`-style classes that set it) — it shifts and clips text on iOS; size comes from `fontSize` only.
 - Layouts must fit a 375 px wide phone (smallest supported iPhone); check `/dev-gallery` at 375 and 360 px.
 - Check visual changes on `/dev-gallery` (dev-only, no login needed) before asking the owner to look on the phone.
+- No layout shift on tap: a user action must not grow or shrink cards in a list (keep fixed-height states; press animations use transform/opacity only via `usePressScale`). Screens presented as modals always get a visible close (X) via `HeaderCloseButton` in the native header.
 - Loading states use the skeletons in `src/components/ui/skeleton.tsx`, not a centered spinner. Haptic feedback goes through `haptics` in `src/lib/haptics.ts` (never call `expo-haptics` directly).
 - NativeWind: never toggle `shadow-*` or `opacity-*` through a conditional `className` (use inline `style`), and never combine `contentContainerClassName` with `contentContainerStyle` on one `ScrollView`.
 - Tab screens stay mounted across logout/login: clear cached server data on sign-out.
@@ -44,6 +45,8 @@ npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — re
 npx expo start              # start the dev server
 npx expo lint               # lint
 npx tsc --noEmit            # typecheck
+npm test                    # all tests: database (PGlite), helpers, UI (Jest); same as CI
+npm run test:ui             # UI tests only (Jest + React Native Testing Library 14: await render/fireEvent)
 npx expo-doctor             # diagnose dependency and config issues
 npx expo install --fix      # fix incompatible package versions
 ```

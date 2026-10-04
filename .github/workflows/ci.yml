@@ -1,0 +1,35 @@
+# Her push'ta ve pull request'te: tip denetimi, kod denetimi ve tüm testler (veritabanı + arayüz).
+# Gerçek Supabase projesine bağlanmaz; veritabanı testleri bilgisayardaki gibi PGlite ile çalışır.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Bu dosya bilgisayarda "npx expo start" ile kendiliğinden oluşur, git'e eklenmez.
+      - name: Expo tip dosyası
+        run: echo '/// <reference types="expo/types" />' > expo-env.d.ts
+
+      - name: Tip denetimi
+        run: npx tsc --noEmit
+
+      - name: Kod denetimi
+        run: npx expo lint
+
+      - name: Testler
+        run: npm test

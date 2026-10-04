@@ -10,7 +10,7 @@ type TeamCrestProps = {
   name: string;
   shortName: string;
   logoUrl?: string | null;
-  size?: 'sm' | 'lg';
+  size?: 'sm' | 'lg' | 'xl';
 };
 
 /**
@@ -19,7 +19,7 @@ type TeamCrestProps = {
  */
 export function TeamCrest({ name, shortName, logoUrl, size = 'lg' }: TeamCrestProps) {
   const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const dimension = size === 'lg' ? 52 : 30;
+  const dimension = size === 'xl' ? 76 : size === 'lg' ? 52 : 30;
 
   if (logoUrl && failedUrl !== logoUrl) {
     return (
@@ -44,7 +44,7 @@ export function TeamCrest({ name, shortName, logoUrl, size = 'lg' }: TeamCrestPr
         height: dimension,
         borderRadius: dimension / 2,
         backgroundColor: primary,
-        borderWidth: size === 'lg' ? 3 : 2,
+        borderWidth: size === 'sm' ? 2 : 3,
         borderColor: secondary,
         alignItems: 'center',
         justifyContent: 'center',
@@ -53,7 +53,7 @@ export function TeamCrest({ name, shortName, logoUrl, size = 'lg' }: TeamCrestPr
         style={{
           color: readableTextColor(primary),
           fontFamily: fonts.extrabold,
-          fontSize: size === 'lg' ? 13 : 9,
+          fontSize: size === 'xl' ? 18 : size === 'lg' ? 13 : 9,
           letterSpacing: 0.5,
         }}>
         {shortName}

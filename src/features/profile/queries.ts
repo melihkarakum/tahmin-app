@@ -1,7 +1,8 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/features/auth/auth-provider';
 import { supabase } from '@/lib/supabase';
+import { teamLogoUrl } from '@/lib/team-logo';
 import type { HistoryItem, MatchStatus, ProfileStats, ResultType } from '@/types/domain';
 
 /** Güncel sezon istatistikleri ve Türkiye sırası. */
@@ -31,8 +32,11 @@ export function useMyStats() {
   });
 }
 
+/** Profil, "Skor Tahminlerim" ve paylaşma ekranı aynı listeyi kullanır (sunucu sınırı 200). */
+export const HISTORY_LIMIT = 200;
+
 /** Kullanıcının tahmin geçmişi, en yeni maç önce. */
-export function usePredictionHistory(limit: number) {
+export function usePredictionHistory(limit: number = HISTORY_LIMIT) {
   const { session } = useAuth();
   const userId = session?.user.id;
 
@@ -47,8 +51,18 @@ export function usePredictionHistory(limit: number) {
         round: row.round,
         kickoffAt: row.kickoff_at,
         status: row.status as MatchStatus,
-        home: { id: 0, name: row.home_team_name, shortName: row.home_team_short },
-        away: { id: 0, name: row.away_team_name, shortName: row.away_team_short },
+        home: {
+          id: 0,
+          name: row.home_team_name,
+          shortName: row.home_team_short,
+          logoUrl: teamLogoUrl(row.home_team_logo),
+        },
+        away: {
+          id: 0,
+          name: row.away_team_name,
+          shortName: row.away_team_short,
+          logoUrl: teamLogoUrl(row.away_team_logo),
+        },
         homeScore: row.home_score,
         awayScore: row.away_score,
         predictedHome: row.predicted_home,
@@ -58,6 +72,25 @@ export function usePredictionHistory(limit: number) {
         predictedAt: row.predicted_at,
       }));
     },
+  });
+}
+
+/** Görünen adı değiştirir (yalnızca kendi profili; kural sunucuda, RLS). */
+export function useUpdateDisplayName() {
+  const queryClient = useQueryClient();
+  const { session } = useAuth();
+  const userId = session?.user.id;
+
+  return useMutation({
+    mutationFn: async (displayName: string) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ display_name: displayName.trim() })
+        .eq('id', userId as string);
+      if (error) throw error;
+    },
+    // Ad sıralamalarda ve odalarda da görünür: hepsi yenilenir.
+    onSuccess: () => queryClient.invalidateQueries(),
   });
 }
 

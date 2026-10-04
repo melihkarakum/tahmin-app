@@ -56,6 +56,27 @@ export function useRoom(roomId: string) {
   });
 }
 
+/** Oda adını değiştirir. Kural sunucuda: yalnızca oda kurucusu (RLS) ve 2-40 karakter. */
+export function useRenameRoom(roomId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const { data, error } = await supabase
+        .from('rooms')
+        .update({ name: name.trim() })
+        .eq('id', roomId)
+        .select('id');
+      if (error) throw error;
+      if (data.length === 0) throw new Error('Yalnızca oda kurucusu adı değiştirebilir.');
+    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['room', roomId] }),
+        queryClient.invalidateQueries({ queryKey: ['my-rooms'] }),
+      ]),
+  });
+}
+
 /** Oda sıralaması: "week" seçiliyse verilen hafta, "season" ise sezonun tamamı. */
 export function useRoomLeaderboard(roomId: string, scope: LeaderboardScope, round: number | undefined) {
   const { session } = useAuth();
@@ -160,7 +181,10 @@ export function toRoomMessage(error: unknown): string {
       ? String((error as { message: unknown }).message)
       : '';
 
-  if (message.includes('2-40 karakter')) return 'Oda adı 2-40 karakter olmalı.';
+  if (message.includes('2-40 karakter') || message.includes('rooms_name_length')) {
+    return 'Oda adı 2-40 karakter olmalı.';
+  }
+  if (message.includes('Yalnızca oda kurucusu')) return 'Oda adını yalnızca oda kurucusu değiştirebilir.';
   if (message.includes('En fazla 10 oda')) return 'En fazla 10 oda kurabilirsin.';
   if (message.includes('En fazla 20 odada')) return 'En fazla 20 odada bulunabilirsin.';
   if (message.includes('fetch') || message.includes('Network')) {

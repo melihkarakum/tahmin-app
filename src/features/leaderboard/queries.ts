@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { useAuth } from '@/features/auth/auth-provider';
 import { supabase } from '@/lib/supabase';
@@ -20,6 +20,8 @@ export function useNationalLeaderboard(
   scope: LeaderboardScope,
   round: number | undefined,
   limit: number = NATIONAL_LIST_SIZE,
+  /** Hafta/Sezon arasında geçerken yenisi gelene kadar eski liste kalsın (liste yanıp sönmesin). */
+  { keepPrevious = false }: { keepPrevious?: boolean } = {},
 ) {
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -27,6 +29,7 @@ export function useNationalLeaderboard(
   return useQuery({
     queryKey: ['national-leaderboard', userId, scope, scope === 'week' ? round : null, limit],
     enabled: userId !== undefined && (scope === 'season' || round !== undefined),
+    placeholderData: keepPrevious ? keepPreviousData : undefined,
     queryFn: async (): Promise<NationalLeaderboard> => {
       const { data, error } = await supabase.rpc('get_national_leaderboard', {
         p_round: scope === 'week' ? round : undefined,

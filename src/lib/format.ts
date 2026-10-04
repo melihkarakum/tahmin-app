@@ -40,6 +40,23 @@ export function formatDateRange(startIso: string, endIso: string): string {
   return startDay === endDay ? `${startDay} ${startMonth}` : `${startDay}–${endDay} ${startMonth}`;
 }
 
+const longDateFormatter = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+/** Örnek: "2 Ekim 2026" */
+export function formatLongDate(iso: string): string {
+  return longDateFormatter.format(new Date(iso));
+}
+
+/** Tahminin maçtan ne kadar önce yapıldığı. Örnek: "Maçtan 3 saat önce", "Maçtan 2 gün önce". */
+export function formatLeadTime(predictedAtIso: string, kickoffIso: string): string | null {
+  const minutes = Math.floor((new Date(kickoffIso).getTime() - new Date(predictedAtIso).getTime()) / 60_000);
+  if (minutes < 1) return null;
+  if (minutes < 60) return `Maçtan ${minutes} dakika önce`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Maçtan ${hours} saat önce`;
+  return `Maçtan ${Math.floor(hours / 24)} gün önce`;
+}
+
 /** Örnek: 1842 -> "1.842" */
 export function formatNumber(value: number): string {
   return numberFormatter.format(value);

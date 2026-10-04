@@ -1147,11 +1147,11 @@ describe('profil istatistikleri ve tahmin geçmişi', () => {
     const { rows } = await asUser(
       db,
       ali,
-      'select match_id, predicted_home, predicted_away, points, home_team_short, predicted_at is not null as has_time from public.get_my_prediction_history()',
+      'select match_id, predicted_home, predicted_away, points, home_team_short, home_team_logo, predicted_at is not null as has_time from public.get_my_prediction_history()',
     );
     assert.deepEqual(rows, [
-      { match_id: late, predicted_home: 2, predicted_away: 2, points: null, home_team_short: 'GS', has_time: true },
-      { match_id: early, predicted_home: 1, predicted_away: 0, points: 5, home_team_short: 'GS', has_time: true },
+      { match_id: late, predicted_home: 2, predicted_away: 2, points: null, home_team_short: 'GS', home_team_logo: null, has_time: true },
+      { match_id: early, predicted_home: 1, predicted_away: 0, points: 5, home_team_short: 'GS', home_team_logo: null, has_time: true },
     ]);
   });
 });

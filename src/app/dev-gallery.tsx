@@ -11,6 +11,7 @@ import { Text } from '@/components/ui/text';
 import { TextField } from '@/components/ui/text-field';
 import { RankRow } from '@/features/leaderboard/components/rank-row';
 import { MatchCard } from '@/features/matches/components/match-card';
+import { PredictionButton } from '@/features/matches/components/prediction-button';
 import { WeekCard } from '@/features/matches/components/week-card';
 import { WeekPickerSheet } from '@/features/matches/components/week-picker-sheet';
 import { useNow } from '@/hooks/use-now';
@@ -18,9 +19,24 @@ import {
   NotificationSettingsCard,
   PermissionNotice,
 } from '@/features/notifications/components/notification-settings-card';
-import { HistoryRow } from '@/features/profile/components/history-row';
+import { FilterChips } from '@/features/profile/components/filter-chips';
+import { PredictionGrid } from '@/features/profile/components/prediction-grid';
+import { ProfileHeader, ProfileHighlights } from '@/features/profile/components/profile-header';
+import {
+  filterCounts,
+  matchesFilter,
+  type PredictionFilter,
+  predictionOutcome,
+} from '@/features/profile/prediction-filters';
 import { RoomInviteCard } from '@/features/rooms/components/room-invite-card';
 import { RoomStandings } from '@/features/rooms/components/room-standings';
+import {
+  PredictionShareCard,
+  ProfileShareCard,
+  profileShareAccent,
+  ShareCardFrame,
+  shareAccent,
+} from '@/features/share/share-card';
 import { teamLogoUrl } from '@/lib/team-logo';
 import type {
   HistoryItem,
@@ -28,6 +44,7 @@ import type {
   LeaderboardScope,
   Match,
   Prediction,
+  ProfileStats,
   Team,
 } from '@/types/domain';
 
@@ -133,38 +150,49 @@ function buildSamples(now: number): { match: Match; prediction?: Prediction }[] 
 
 const SAMPLE_ROUNDS = Array.from({ length: 38 }, (_, index) => index + 1);
 
+const historyItem = (
+  matchId: number,
+  home: [string, string],
+  away: [string, string],
+  score: [number, number] | null,
+  guess: [number, number],
+  points: number | null,
+  resultType: HistoryItem['resultType'],
+): HistoryItem => ({
+  matchId,
+  round: 8 - Math.floor(matchId / 3),
+  kickoffAt: new Date(Date.UTC(2026, 9, 3 - matchId, 17)).toISOString(),
+  status: score ? 'finished' : 'scheduled',
+  home: team(matchId * 2, home[0], home[1]),
+  away: team(matchId * 2 + 1, away[0], away[1]),
+  homeScore: score ? score[0] : null,
+  awayScore: score ? score[1] : null,
+  predictedHome: guess[0],
+  predictedAway: guess[1],
+  points,
+  resultType,
+  predictedAt: new Date(Date.UTC(2026, 9, 3 - matchId, 13, 42)).toISOString(),
+});
+
 const SAMPLE_HISTORY: HistoryItem[] = [
-  {
-    matchId: 1,
-    round: 8,
-    kickoffAt: '2026-10-02T17:00:00Z',
-    status: 'finished',
-    home: { id: 1, name: 'Samsunspor', shortName: 'SAM' },
-    away: { id: 2, name: 'Göztepe', shortName: 'GOZ' },
-    homeScore: 1,
-    awayScore: 1,
-    predictedHome: 1,
-    predictedAway: 1,
-    points: 5,
-    resultType: 'exact',
-    predictedAt: '2026-10-02T15:42:00Z',
-  },
-  {
-    matchId: 2,
-    round: 8,
-    kickoffAt: '2026-10-05T17:00:00Z',
-    status: 'scheduled',
-    home: { id: 3, name: 'Gaziantep FK', shortName: 'GAZ' },
-    away: { id: 4, name: 'Kayserispor', shortName: 'KAY' },
-    homeScore: null,
-    awayScore: null,
-    predictedHome: 2,
-    predictedAway: 1,
-    points: null,
-    resultType: null,
-    predictedAt: '2026-10-03T14:08:00Z',
-  },
+  historyItem(0, ['Gaziantep FK', 'GAZ'], ['Kayserispor', 'KAY'], null, [2, 1], null, null),
+  historyItem(1, ['Samsunspor', 'SAM'], ['Göztepe', 'GOZ'], [1, 1], [1, 1], 5, 'exact'),
+  historyItem(2, ['Trabzonspor', 'TRA'], ['Konyaspor', 'KON'], [2, 0], [2, 1], 3, 'outcome'),
+  historyItem(3, ['Kasımpaşa', 'KAS'], ['Alanyaspor', 'ALA'], [3, 1], [1, 2], 0, 'miss'),
+  historyItem(4, ['Galatasaray', 'GAL'], ['Fenerbahçe', 'FEN'], [2, 1], [1, 0], 4, 'outcome_diff'),
 ];
+
+const SAMPLE_STATS: ProfileStats = {
+  seasonPoints: 19,
+  predictionCount: 42,
+  scoredCount: 33,
+  exactCount: 3,
+  outcomeCount: 12,
+  accuracyPercent: 36,
+  lastFiveRoundsPoints: 23,
+  seasonRank: 3,
+  seasonTotal: 120,
+};
 
 // Oda sıralaması örnekleri: kalabalık oda (kürsü + liste), iki kişilik oda, henüz puan yok.
 const ROOM_ROWS: LeaderboardRow[] = [
@@ -201,6 +229,7 @@ export default function DevGallery() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [roomScope, setRoomScope] = useState<LeaderboardScope>('week');
   const [roomSample, setRoomSample] = useState<keyof typeof ROOM_SAMPLES>('full');
+  const [historyFilter, setHistoryFilter] = useState<PredictionFilter>('all');
 
   if (!__DEV__) return <Redirect href="/" />;
 
@@ -247,6 +276,15 @@ export default function DevGallery() {
         <Button label="Katıl" onPress={() => setSheetOpen(false)} style={{ marginTop: 16 }} />
       </BottomSheet>
 
+      <SectionTitle title="Tahmin düğmesi" />
+      <View className="gap-3">
+        <PredictionButton state="new" onPress={() => {}} />
+        <PredictionButton state="dirty" onPress={() => {}} />
+        <PredictionButton state="saving" onPress={() => {}} />
+        <PredictionButton state="saved" savedTime="14:32" onPress={() => {}} />
+        <PredictionButton state="error" errorText="Bağlantı yok" onPress={() => {}} />
+      </View>
+
       <SectionTitle title="Maç kartları" />
       <View className="gap-3">
         {samples.map(({ match, prediction }) => (
@@ -254,11 +292,49 @@ export default function DevGallery() {
         ))}
       </View>
 
-      <SectionTitle title="Tahmin geçmişi" />
-      <View className="overflow-hidden rounded-3xl border border-border bg-surface">
-        {SAMPLE_HISTORY.map((item, index) => (
-          <HistoryRow key={item.matchId} item={item} isLast={index === SAMPLE_HISTORY.length - 1} />
-        ))}
+      <SectionTitle title="Profil" />
+      <ProfileHeader
+        username="melih"
+        displayName="Melih"
+        seasonLabel="2026-27 sezonu"
+        stats={SAMPLE_STATS}
+        onOpenSettings={() => {}}
+        onEditProfile={() => {}}
+        onShareProfile={() => {}}
+      />
+      <View className="mt-5">
+        <ProfileHighlights stats={SAMPLE_STATS} />
+      </View>
+      <Text className="mb-3 mt-8 text-xl font-bold text-ink">Skor Tahminlerim</Text>
+      <FilterChips
+        value={historyFilter}
+        counts={filterCounts(SAMPLE_HISTORY)}
+        onChange={setHistoryFilter}
+      />
+      <View className="mt-4">
+        <PredictionGrid
+          items={SAMPLE_HISTORY.filter((item) => matchesFilter(item, historyFilter))}
+          onPress={() => {}}
+        />
+      </View>
+
+      <SectionTitle title="Paylaşma kartları" />
+      <View className="items-center gap-4">
+        <View style={{ borderRadius: 24, overflow: 'hidden' }}>
+          <ShareCardFrame width={300} accent={shareAccent(predictionOutcome(SAMPLE_HISTORY[1]))}>
+            <PredictionShareCard item={SAMPLE_HISTORY[1]} username="melih" displayName="Melih" />
+          </ShareCardFrame>
+        </View>
+        <View style={{ borderRadius: 24, overflow: 'hidden' }}>
+          <ShareCardFrame width={300} accent={shareAccent(predictionOutcome(SAMPLE_HISTORY[0]))}>
+            <PredictionShareCard item={SAMPLE_HISTORY[0]} username="melih" displayName="Melih" />
+          </ShareCardFrame>
+        </View>
+        <View style={{ borderRadius: 24, overflow: 'hidden' }}>
+          <ShareCardFrame width={300} accent={profileShareAccent(SAMPLE_STATS)}>
+            <ProfileShareCard username="melih" displayName="Melih" seasonLabel="2026-27" stats={SAMPLE_STATS} />
+          </ShareCardFrame>
+        </View>
       </View>
 
       <SectionTitle title="Yükleniyor görünümü" />
