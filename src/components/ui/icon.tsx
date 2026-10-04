@@ -20,6 +20,7 @@ const symbols = {
   settings: { ios: 'gearshape', android: 'settings', web: 'settings' },
   history: { ios: 'clock.arrow.circlepath', android: 'history', web: 'history' },
   edit: { ios: 'pencil', android: 'edit', web: 'edit' },
+  reset: { ios: 'arrow.counterclockwise', android: 'restart_alt', web: 'restart_alt' },
   close: { ios: 'xmark', android: 'close', web: 'close' },
   share: { ios: 'square.and.arrow.up', android: 'share', web: 'share' },
   check: { ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' },

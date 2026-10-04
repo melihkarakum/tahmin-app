@@ -68,6 +68,14 @@ describe('MatchCard (açık maç)', () => {
     expect(screen.getByText('Kaydedildi')).toBeTruthy();
   });
 
+  test('"Sıfırla" skoru tek dokunuşla 0-0 yapar', async () => {
+    await render(<MatchCard match={match()} prediction={saved} now={NOW} />);
+    await fireEvent.press(screen.getByLabelText('Skoru 0-0 yap'));
+    expect(screen.getByText('Tahmini Güncelle')).toBeTruthy();
+    await fireEvent.press(screen.getByText('Tahmini Güncelle'));
+    expect(mockMutate).toHaveBeenCalledWith({ matchId: 7, homeGoals: 0, awayGoals: 0 }, expect.anything());
+  });
+
   test('gol sayısı 0\'ın altına inmez', async () => {
     await render(<MatchCard match={match()} now={NOW} />);
     await fireEvent.press(screen.getByLabelText('Galatasaray golünü azalt'));

@@ -3,6 +3,8 @@
 
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
+import { constantTimeEqual } from './security.ts';
+
 export function serviceClient(): SupabaseClient {
   const url = Deno.env.get('SUPABASE_URL');
   let key: string | undefined;
@@ -26,5 +28,6 @@ export function json(body: unknown, status = 200): Response {
 /** Zamanlayıcının ve geliştiricinin çağrısı mı? (x-sync-secret başlığı SYNC_SECRET ile aynı olmalı) */
 export function isAuthorizedCall(request: Request): boolean {
   const expected = Deno.env.get('SYNC_SECRET');
-  return Boolean(expected) && request.headers.get('x-sync-secret') === expected;
+  const given = request.headers.get('x-sync-secret');
+  return Boolean(expected) && given !== null && constantTimeEqual(given, expected as string);
 }

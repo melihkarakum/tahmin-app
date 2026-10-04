@@ -19,6 +19,7 @@ ekran kaydı al (en hızlı çözüm yolu budur).
 - [ ] Hafta kartında ‹ › ile hafta değişiyor; hafta adına dokununca seçici açılıyor.
 - [ ] Açık maçta skoru artır/azalt: her dokunuşta hafif titreşim; 0'ın altına, 20'nin üstüne çıkmıyor.
 - [ ] "Tahmini Kaydet" → "Kaydediliyor" → onay işaretiyle "Kaydedildi · saat"; kart büyüyüp küçülmüyor, altındaki maçlar kaymıyor.
+- [ ] Skor 0-0 değilken panelin sağ üstündeki "Sıfırla" tek dokunuşla 0-0 yapıyor; hiçbir şey kaymıyor.
 - [ ] Kayıtlı tahminde skoru değiştir: düğme "Tahmini Güncelle" oluyor; eski skora dönünce yine "Kaydedildi".
 - [ ] İnterneti kapatıp kaydet: düğme sallanıyor, "Bağlantı yok · Tekrar dene" yazıyor; internet açılınca dokununca kaydediyor.
 - [ ] Başlamış maçta skor paneli yok, "Kilitlendi" yazıyor.
@@ -27,6 +28,7 @@ ekran kaydı al (en hızlı çözüm yolu budur).
 
 ## 3. Odalar
 
+- [ ] Hiç odan yokken mesaj ve düğmeler ekranın ortasında; oda varken "Oda Kur / Koda Katıl" altta.
 - [ ] Oda Kur / Koda Katıl panelleri düzgün açılıyor, klavye alanı kapatmıyor.
 - [ ] Odada davet alanı kapalı başlıyor (tek başınaysan açık); dokununca WhatsApp ve Paylaş çıkıyor.
 - [ ] WhatsApp: mesajda bağlantı tıklanabilir; bağlantı tarayıcıda kodu gösteren sayfayı açıyor.

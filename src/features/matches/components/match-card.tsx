@@ -2,6 +2,7 @@ import { type ReactNode, useState } from 'react';
 import { View } from 'react-native';
 
 import { Icon } from '@/components/ui/icon';
+import { PressableOpacity } from '@/components/ui/pressable-opacity';
 import { Text } from '@/components/ui/text';
 import { colors, tabularNums } from '@/constants/theme';
 import { PointsChip } from '@/features/matches/components/points-chip';
@@ -110,6 +111,13 @@ export function MatchCard({ match, prediction, now }: MatchCardProps) {
             <Text className="text-center text-[10px] font-bold tracking-widest text-muted">
               {trUpper('Skor tahminin')}
             </Text>
+            <ResetScoreButton
+              visible={homeGoals !== 0 || awayGoals !== 0}
+              onPress={() => {
+                haptics.selection();
+                change(0, 0);
+              }}
+            />
             <View className="mt-3 flex-row items-center">
               <View className="flex-1 items-center">
                 <ScoreStepper
@@ -140,6 +148,23 @@ export function MatchCard({ match, prediction, now }: MatchCardProps) {
       ) : (
         <PredictionStrip phase={phase} prediction={prediction} />
       )}
+    </View>
+  );
+}
+
+/**
+ * Skoru tek dokunuşla 0-0'a döndürür. Panelin köşesine sabitlenir; görünüp kaybolması
+ * hiçbir şeyi kaydırmaz (yalnızca opaklık değişir).
+ */
+function ResetScoreButton({ visible, onPress }: { visible: boolean; onPress: () => void }) {
+  return (
+    <View style={{ position: 'absolute', top: 6, right: 6, opacity: visible ? 1 : 0, pointerEvents: visible ? 'auto' : 'none' }}>
+      <PressableOpacity onPress={onPress} disabled={!visible} hitSlop={8} accessibilityLabel="Skoru 0-0 yap">
+        <View className="flex-row items-center gap-1 rounded-full bg-surface px-2.5 py-1">
+          <Icon name="reset" size={11} color={colors.muted} />
+          <Text className="text-[11px] font-bold text-muted">Sıfırla</Text>
+        </View>
+      </PressableOpacity>
     </View>
   );
 }

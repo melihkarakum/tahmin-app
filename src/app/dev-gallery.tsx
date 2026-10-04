@@ -29,6 +29,7 @@ import {
   predictionOutcome,
 } from '@/features/profile/prediction-filters';
 import { RoomInviteCard } from '@/features/rooms/components/room-invite-card';
+import { RoomsEmptyState } from '@/features/rooms/components/rooms-empty-state';
 import { RoomStandings } from '@/features/rooms/components/room-standings';
 import {
   PredictionShareCard,
@@ -341,6 +342,11 @@ export default function DevGallery() {
       <View className="gap-3">
         <MatchCardSkeleton />
         <RowsSkeleton count={3} />
+      </View>
+
+      <SectionTitle title="Odalar (boş)" />
+      <View className="rounded-3xl border border-border">
+        <RoomsEmptyState onCreate={() => {}} onJoin={() => {}} />
       </View>
 
       <SectionTitle title="Oda ekranı" />

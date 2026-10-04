@@ -20,6 +20,7 @@ import {
   useJoinRoom,
   useMyRooms,
 } from '@/features/rooms/queries';
+import { RoomsEmptyState } from '@/features/rooms/components/rooms-empty-state';
 
 export default function RoomsScreen() {
   const router = useRouter();
@@ -54,18 +55,25 @@ export default function RoomsScreen() {
     setRefreshing(false);
   };
 
+  const isEmpty = roomsQuery.isSuccess && rooms.length === 0;
+
   return (
     <Screen
+      fill={isEmpty}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primary} />
+      }
+      // Odası olan kullanıcıda düğmeler başparmağın rahat eriştiği altta durur.
+      footer={
+        roomsQuery.isSuccess && rooms.length > 0 ? (
+          <View className="flex-row gap-3 border-t border-border bg-background px-5 pb-3 pt-3">
+            <Button label="Oda Kur" icon="plus" onPress={() => setSheet('create')} style={{ flex: 1 }} />
+            <Button label="Koda Katıl" variant="secondary" onPress={() => setSheet('join')} style={{ flex: 1 }} />
+          </View>
+        ) : null
       }>
       <Text className="text-3xl font-extrabold text-ink">Odalar</Text>
       <Text className="mt-1 text-sm font-medium text-muted">Arkadaşlarınla kendi sıralamanı kur.</Text>
-
-      <View className="mt-5 flex-row gap-3">
-        <Button label="Oda Kur" onPress={() => setSheet('create')} style={{ flex: 1 }} />
-        <Button label="Koda Katıl" variant="secondary" onPress={() => setSheet('join')} style={{ flex: 1 }} />
-      </View>
 
       {roomsQuery.isLoading ? (
         <SkeletonGroup className="mt-6 gap-3">
@@ -79,15 +87,7 @@ export default function RoomsScreen() {
           <Button label="Tekrar dene" variant="secondary" onPress={refresh} />
         </View>
       ) : rooms.length === 0 ? (
-        <View className="mt-6 items-center gap-3 rounded-3xl border border-border bg-surface px-6 py-10">
-          <View className="h-14 w-14 items-center justify-center rounded-2xl bg-primary-soft">
-            <Icon name="rooms" size={26} color={colors.primary} />
-          </View>
-          <Text className="text-center text-base font-bold text-ink">Henüz bir odan yok</Text>
-          <Text className="text-center text-sm text-muted">
-            Bir oda kur ve kodunu arkadaşlarınla paylaş ya da arkadaşının verdiği kodla katıl.
-          </Text>
-        </View>
+        <RoomsEmptyState onCreate={() => setSheet('create')} onJoin={() => setSheet('join')} />
       ) : (
         <View className="mt-6 gap-3">
           {rooms.map((room) => (

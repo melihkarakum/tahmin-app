@@ -157,6 +157,8 @@ Uygulamanın bilmesi gerekenler:
 
 ## Supabase güvenlik denetiminde bilinçli kabul edilen uyarılar
 
+Tam denetim raporu ve tekrarlama komutları: `docs/SECURITY.md`.
+
 - `is_username_available`: giriş yapmamış kullanıcı da çağırabilir; kayıt ekranının kullanıcı adı kontrolü için. Yalnızca evet/hayır döner.
 - `save_prediction`: giriş yapan kullanıcı çağırabilir; tahmin yazmanın tek yolu budur.
 - `create_room`, `join_room`, `get_room_leaderboard`, `get_my_rooms`, `get_national_leaderboard`, `delete_my_account`, `register_push_token`, `unregister_push_token`: giriş yapan kullanıcının çağırması için tasarlandı; her biri kimliği oturumdan alır ve yetkiyi kendi içinde denetler.

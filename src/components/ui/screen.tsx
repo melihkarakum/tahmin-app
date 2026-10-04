@@ -10,15 +10,17 @@ type ScreenProps = {
   topInset?: boolean;
   /** Aşağı çekip yenileme. */
   refreshControl?: ReactElement<RefreshControlProps>;
+  /** İçerik ekranın kalan yüksekliğini doldurur (örn. boş durumu ortalamak için). */
+  fill?: boolean;
 };
 
-export function Screen({ children, footer, topInset = true, refreshControl }: ScreenProps) {
+export function Screen({ children, footer, topInset = true, refreshControl, fill = false }: ScreenProps) {
   const insets = useSafeAreaInsets();
 
   return (
     <View className="flex-1 bg-background" style={{ paddingTop: topInset ? insets.top : 0 }}>
       <ScrollView
-        contentContainerClassName="px-5 pb-10 pt-3"
+        contentContainerClassName={fill ? 'grow px-5 pb-10 pt-3' : 'px-5 pb-10 pt-3'}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl}>
         {children}
