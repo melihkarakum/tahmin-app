@@ -126,6 +126,15 @@ Uygulamanın bilmesi gerekenler:
 - `get_my_stats()`, `get_my_prediction_history()`: kullanıcının kendi verisi (RLS ile).
 - `delete_my_account()`: giriş bilgileri `auth.users`'tan silinir; profil "Silinmiş Kullanıcı" olarak anonimleşir; tahminler kalır ama sıralamada görünmez; kurulan odalar en eski üyeye devredilir, tek kişilikse silinir.
 
+## Davet bağlantısı ve web sitesi (FAZ 14)
+
+- **Bağlantı:** `https://tahminet.expo.app/davet?kod=ABC234` (`src/lib/invite.ts`). Kod sorgu parametresindedir; durağan (static) web çıktısında `/davet/[kod]` gibi dinamik yollar çalışmadığı için bu biçim seçildi. Adres değişirse eski davetler çalışmaz.
+- **WhatsApp:** oda ekranındaki düğme `https://wa.me/?text=…` açar (WhatsApp'ın resmi biçimi; kişi seçilince mesaj hazır gelir). Mesajda bağlantı ve elle girmek için kod vardır. "Paylaş" telefonun paylaşma penceresini açar.
+- **`src/app/davet.tsx`:** web'de bilgi sayfası (kod, kopyala, katılma adımları); uygulamada katılma ekranı (onaydan sonra `join_room`). Giriş yapılmamışsa kod cihazda saklanır (`pending-invite.ts`, en fazla 1 gün), girişten sonra ekran kendiliğinden açılır. Bağlantıdaki kod `^[A-Z0-9]{6}$` dışında ise reddedilir.
+- **Web sitesi (EAS Hosting, ücretsiz plan: ayda 100 bin istek):** yayındaki web sürümünde (`Platform.OS === 'web' && !__DEV__`) yalnızca `davet` açılır, diğer tüm sayfalar ona yönlenir; uygulama telefon içindir. Geliştirirken web'de her şey açıktır (`/dev-gallery`). WhatsApp önizlemesi `src/app/+html.tsx`'teki `og:` etiketlerini okur. Site haritası kapalı (`expo-router` eklentisinde `sitemap: false`).
+- **Yeniden yayınlama** (davet sayfası değişince): `npx expo export --platform web`, ardından `npx eas-cli@latest deploy --prod`.
+- **Sonra (FAZ 19):** bağlantının uygulamayı doğrudan açması için iOS Universal Links (`public/.well-known/apple-app-site-association`, Apple Team ID + `ios.associatedDomains: ["applinks:tahminet.expo.app"]`) ve Android App Links (`assetlinks.json` + `intentFilters`). O zamana kadar bağlantı tarayıcıda sayfayı açar; uygulama içi `tahminapp://davet?kod=…` bağlantısı da aynı ekranı açar.
+
 ## Bildirimler (FAZ 13)
 
 - **Akış:** uygulama izin alınca cihazın Expo bildirim adresini `register_push_token` ile kaydeder (çıkışta `unregister_push_token`). `send-notifications` Edge Function'ı pg_cron ile 10 dakikada bir (xx:05, xx:15, …) çalışır; `collect_match_reminders` ve `collect_round_results` fonksiyonlarından kime ne gideceğini alır, Expo bildirim servisine 100'erli gruplar halinde yollar.

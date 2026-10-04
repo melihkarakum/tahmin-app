@@ -17,6 +17,7 @@ import {
   useRoom,
   useRoomLeaderboard,
 } from '@/features/rooms/queries';
+import { inviteMessage, whatsappShareUrl } from '@/lib/invite';
 import { trUpper } from '@/lib/text';
 import type { LeaderboardRow, LeaderboardScope } from '@/types/domain';
 
@@ -72,18 +73,15 @@ export default function RoomScreen() {
     );
   }
 
-  const inviteMessage = `${room.name} tahmin odasına katıl! Uygulamada Odalar → Koda Katıl'a bu kodu gir: ${room.code}`;
+  const message = inviteMessage(room.name, room.code);
 
-  // WhatsApp'ın resmi "tıkla ve sohbet et" biçimi: kişi seçilince mesaj hazır gelir.
   // WhatsApp yoksa telefonun paylaşma penceresi açılır.
   const inviteWhatsApp = () => {
-    Linking.openURL(`https://wa.me/?text=${encodeURIComponent(inviteMessage)}`).catch(() =>
-      Share.share({ message: inviteMessage }),
-    );
+    Linking.openURL(whatsappShareUrl(message)).catch(() => Share.share({ message }));
   };
 
   const inviteOther = () => {
-    Share.share({ message: inviteMessage });
+    Share.share({ message });
   };
 
   const showError = (error: unknown) => Alert.alert('İşlem tamamlanamadı', toRoomMessage(error));
@@ -147,7 +145,7 @@ export default function RoomScreen() {
           <Button label="Paylaş" variant="secondary" onPress={inviteOther} style={{ flex: 1 }} />
         </View>
         <Text className="mt-2 text-xs text-muted">
-          {"Arkadaşların uygulamada Odalar → Koda Katıl'a bu kodu girerek katılır."}
+          {"Arkadaşların davet bağlantısına dokunarak ya da Odalar → Koda Katıl'a bu kodu girerek katılır."}
         </Text>
       </View>
 

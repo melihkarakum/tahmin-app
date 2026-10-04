@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "web", "--", "--port", "8083"],
       "port": 8083
+    },
+    {
+      "name": "tahmin-app-site",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["expo", "serve", "--port", "8090"],
+      "port": 8090
     }
   ]
 }

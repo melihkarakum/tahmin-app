@@ -21,7 +21,7 @@ Her faz tamamlanınca onay alınır; onaysız sonraki faza geçilmez.
 | 11 | Sıralama | Tamamlandı (2026-10-04): Türkiye geneli haftalık ve sezon sıralaması (ilk 50 + kendi sıran / toplam kişi), hafta kartında haftalık sıra. Yalnızca puanlanmış tahmini olanlar sıralamaya girer; banlı ve silinmiş hesaplar sayılmaz. 68 yerel test |
 | 12 | Profil ve istatistikler | Tamamlandı (2026-10-04): gerçek istatistikler (sezon puanı, tahmin, tam skor, doğru sonuç, doğruluk, son 5 hafta, Türkiye sırası), tahmin geçmişi (tahmin zamanıyla), uygulama içinden hesap silme (giriş bilgisi silinir, profil anonimleşir). Örnek veri tamamen kaldırıldı. 74 yerel test + gerçek projede 19 kontrol |
 | 13 | Bildirimler | Kod tamam (2026-10-04): maç hatırlatması (tahmin yapılmamış maç başlamadan 1 saat önce) ve hafta sonucu (puan + haftalık Türkiye sırası, 09:00-22:00 arası); Profil'de iki anahtar; ilk tahminden sonra uygulama içi "haber verelim mi?" sorusu; bildirime dokununca ilgili ekran açılır. Gönderim 10 dakikada bir sunucudan. 95 yerel test + gerçek projede 23 kontrol. iPhone'da deneme kullanıcı kararıyla sonraya bırakıldı; Android'de Expo Go bildirim almıyor, mağaza sürümünde çalışacak |
-| 14 | WhatsApp daveti ve deep linking | Başladı (2026-10-04): oda ekranında "WhatsApp" (resmi `https://wa.me/?text=` biçimi, kod + talimat) ve "Paylaş" düğmeleri. Kalan: `/join/[kod]` bağlantı ekranı (girişsizken kodu saklayıp girişten sonra devam), 375/360 px kontrolü, testler. Tıklanabilir https davet linki mağaza sürümüyle birlikte (Apple hesabı + web adresi; EAS Hosting'in ücretsiz alt alan adı araştırılacak) |
+| 14 | WhatsApp daveti ve deep linking | Tamamlandı (2026-10-04): oda ekranında "WhatsApp" ve "Paylaş" düğmeleri; mesajda tıklanabilir davet bağlantısı (`https://tahminet.expo.app/davet?kod=…`, EAS Hosting ücretsiz). Bağlantı tarayıcıda kodu ve katılma adımlarını gösteren sayfayı açar; uygulamada `davet` ekranı onay alıp odaya katılır, girişsizse kodu saklayıp girişten sonra devam eder. Yayındaki web sitesinde uygulamanın geri kalanı kapalı. 98 yerel test. Bağlantının uygulamayı doğrudan açması (Universal Links / App Links) mağaza sürümüyle (FAZ 19, Apple hesabı gerekir) |
 | 15 | Arayüz cilası | |
 | 16 | Test | |
 | 17 | Güvenlik denetimi | |
@@ -77,7 +77,8 @@ Listeye eklenen zorunlular: uygulama içinden hesap silme, kayıtta gizlilik ve 
 | API-Football ücretli plana geçiş (güncel sezon için şart); ardından test maçlarını silmek | Gerçek maçlarla test ya da beta öncesi |
 | Uygulamanın gerçek adı ve mağaza kimliği | FAZ 13 |
 | Apple Developer hesabı: yıllık 99 USD (bölgeye göre yerel para biriminde), iki adımlı doğrulamalı Apple hesabı ve yasal ad gerekir. App Store ve TestFlight için şart (Expo Go'da bildirim testi için gerekmiyor) | Beta öncesi |
-| Alan adı (davet linki, e-posta göndereni, gizlilik sayfası) | FAZ 14 |
+| Alan adı (e-posta göndereni, gizlilik sayfası; davet linki şimdilik ücretsiz `tahminet.expo.app`). Kendi alan adını EAS Hosting'e bağlamak ücretli plan ister | Beta öncesi |
+| Davet bağlantısının uygulamayı doğrudan açması: `public/.well-known/apple-app-site-association` (Apple Team ID gerekir) + `ios.associatedDomains`, Android için `assetlinks.json` + `intentFilters` | FAZ 19 |
 | Takım logoları: kullanıcı kararıyla uygulamada açık (2026-10-04). Logoların hakları kulüplere ait; futbol API'si de kullanım izninin hak sahiplerinden alınması gerekebileceğini söylüyor. Mağazaya çıkmadan önce avukat görüşü ya da kulüp/lig izni şart. Gerekirse sunucudan tek komutla kapatılır (ARCHITECTURE.md) | FAZ 19 |
 
 ## Yayın öncesi kontrol listesi

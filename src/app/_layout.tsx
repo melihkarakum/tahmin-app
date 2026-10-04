@@ -12,12 +12,18 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 
 import { fonts } from '@/constants/fonts';
 import { colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/features/auth/auth-provider';
 import { useNotificationRouting, usePushRegistration } from '@/features/notifications/push';
+import { usePendingInviteRedirect } from '@/features/rooms/pending-invite';
 import { queryClient } from '@/lib/query-client';
+
+// Yayındaki web sitesinde (tahminet.expo.app) yalnızca davet sayfası açılır; uygulama telefon için.
+// Geliştirirken web'de her şey açık kalır (tasarım kontrolü için /dev-gallery).
+const isWebsite = Platform.OS === 'web' && !__DEV__;
 
 // Alt sayfalar (oda, tahmin geçmişi): yalnızca geri oku olan sade başlık.
 const detailHeader = {
@@ -63,6 +69,7 @@ function RootNavigator() {
 
   usePushRegistration(session?.user.id);
   useNotificationRouting(isReady && isSignedIn);
+  usePendingInviteRedirect(isReady && isSignedIn);
 
   if (!isReady) return null;
 
@@ -74,15 +81,18 @@ function RootNavigator() {
           headerShown: false,
           contentStyle: { backgroundColor: colors.background },
         }}>
-        <Stack.Protected guard={isSignedIn}>
+        <Stack.Protected guard={!isWebsite && isSignedIn}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="room/[id]" options={detailHeader} />
           <Stack.Screen name="history" options={detailHeader} />
         </Stack.Protected>
 
-        <Stack.Protected guard={!isSignedIn}>
+        <Stack.Protected guard={!isWebsite && !isSignedIn}>
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
+
+        {/* Davet bağlantısı: girişli de girişsiz de açılır (ekran kendisi yönetir). */}
+        <Stack.Screen name="davet" />
       </Stack>
     </>
   );
