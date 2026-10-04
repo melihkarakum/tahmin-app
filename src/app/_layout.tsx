@@ -9,6 +9,7 @@ import { PlusJakartaSans_800ExtraBold } from '@expo-google-fonts/plus-jakarta-sa
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
+import Head from 'expo-router/head';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -23,9 +24,6 @@ import { useNotificationRouting, usePushRegistration } from '@/features/notifica
 import { usePendingInviteRedirect } from '@/features/rooms/pending-invite';
 import { queryClient } from '@/lib/query-client';
 
-// Yayındaki web sitesinde (tahminet.expo.app) yalnızca davet sayfası açılır; uygulama telefon için.
-// Geliştirirken web'de her şey açık kalır (tasarım kontrolü için /dev-gallery).
-const isWebsite = Platform.OS === 'web' && !__DEV__;
 
 // Alt sayfalar (oda, tahmin geçmişi): yalnızca geri oku olan sade başlık.
 const detailHeader = {
@@ -90,12 +88,16 @@ function RootNavigator() {
   return (
     <>
       <StatusBar style="light" />
+      {/* Web'de sekme başlığı (davet sayfası kendi başlığını verir). */}
+      <Head>
+        <title>Tahminet</title>
+      </Head>
       <Stack
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: colors.background },
         }}>
-        <Stack.Protected guard={!isWebsite && isSignedIn}>
+        <Stack.Protected guard={isSignedIn}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="room/[id]" options={detailHeader} />
           <Stack.Screen name="history" options={{ ...detailHeader, title: 'Skor Tahminlerim' }} />
@@ -111,14 +113,14 @@ function RootNavigator() {
           />
         </Stack.Protected>
 
-        <Stack.Protected guard={!isWebsite && !isSignedIn}>
+        <Stack.Protected guard={!isSignedIn}>
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
 
         {/* Davet bağlantısı: girişli de girişsiz de açılır (ekran kendisi yönetir). */}
         <Stack.Screen
           name="davet"
-          options={isWebsite || Platform.OS === 'web' ? undefined : { ...closableHeader, title: '' }}
+          options={Platform.OS === 'web' ? undefined : { ...closableHeader, title: '' }}
         />
       </Stack>
     </>

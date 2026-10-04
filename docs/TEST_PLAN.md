@@ -7,6 +7,10 @@ dokunma, klavye, bildirim, paylaşma penceresi, gerçek ağ.
 Nasıl: bilgisayarda `npx expo start`, iPhone'da Expo Go ile aç. Her maddeyi dene, sorun varsa
 ekran kaydı al (en hızlı çözüm yolu budur).
 
+Beta sürümleri:
+- **iPhone (Safari):** https://tahminet.expo.app → Paylaş → Ana Ekrana Ekle. Bildirim ve görsel paylaşma web'de yok; onaylar tarayıcı penceresiyle sorulur.
+- **Android (APK):** EAS derleme sayfasındaki bağlantıdan indir, "bilinmeyen kaynaklardan yükleme"ye izin ver, kur. Bildirim için Firebase kurulumu gerekiyor (henüz yok).
+
 ## 1. Kayıt, giriş, çıkış
 
 - [ ] Yeni hesap: kullanıcı adı alınmışsa uyarı çıkıyor; koşullar işaretlenmeden kayıt olmuyor.

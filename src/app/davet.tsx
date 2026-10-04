@@ -14,13 +14,14 @@ import { normalizeInviteCode } from '@/lib/invite';
 import { trUpper } from '@/lib/text';
 
 // Davet bağlantısı: https://tahminet.expo.app/davet?kod=ABC234
-// - Tarayıcıda: kodu ve uygulamayla nasıl katılınacağını gösteren sayfa (web sitesi).
-// - Uygulamada (bağlantı uygulamayı açınca): onay alıp odaya katılır. Giriş yapılmamışsa kod
+// - Tarayıcıda, giriş yapılmamışsa: kod ve "tarayıcıda kayıt ol / giriş yap" (web sürümü).
+// - Uygulamada ya da tarayıcıda giriş yapılmışsa: onay alıp odaya katılır. Giriş yapılmamışsa kod
 //   saklanır, girişten sonra bu ekran yeniden açılır.
 export default function InviteScreen() {
   const { kod } = useLocalSearchParams<{ kod?: string | string[] }>();
+  const { session } = useAuth();
   const code = normalizeInviteCode(Array.isArray(kod) ? kod[0] : kod);
-  return Platform.OS === 'web' ? <InviteLanding code={code} /> : <InviteJoin code={code} />;
+  return Platform.OS === 'web' && !session ? <InviteLanding code={code} /> : <InviteJoin code={code} />;
 }
 
 const noSubscription = () => () => {};
@@ -35,8 +36,15 @@ function useIsBrowser() {
 }
 
 function InviteLanding({ code }: { code: string | null }) {
+  const router = useRouter();
   const mounted = useIsBrowser();
   const [copied, setCopied] = useState(false);
+
+  // Kod saklanır; kayıt ya da girişten sonra davet ekranı kendiliğinden açılır.
+  const continueTo = (path: '/register' | '/login') => {
+    if (code) savePendingInvite(code);
+    router.push(path);
+  };
 
   const copy = async () => {
     if (!code) return;
@@ -82,10 +90,15 @@ function InviteLanding({ code }: { code: string | null }) {
           </View>
         )}
 
-        <View className="mt-6 gap-4">
-          <Step number={1} text="Uygulamayı telefonuna indir. Çok yakında App Store ve Google Play'de." />
-          <Step number={2} text="Kayıt ol ya da giriş yap." />
-          <Step number={3} text="Odalar sekmesinde Koda Katıl'a dokun ve bu kodu gir." />
+        <View className="mt-6 gap-3">
+          <Button label="Tarayıcıda Kayıt Ol" onPress={() => continueTo('/register')} />
+          <Button label="Giriş Yap" variant="secondary" onPress={() => continueTo('/login')} />
+        </View>
+
+        <View className="mt-7 gap-4">
+          <Step number={1} text="Kayıt ol ya da giriş yap; davet kendiliğinden açılır, Odaya Katıl'a dokun." />
+          <Step number={2} text="Telefon uygulaması çok yakında mağazalarda. O zamana kadar tarayıcıdan oynayabilirsin." />
+          <Step number={3} text="iPhone'da Safari'de Paylaş → Ana Ekrana Ekle ile uygulama gibi açılır." />
         </View>
       </View>
     </Screen>

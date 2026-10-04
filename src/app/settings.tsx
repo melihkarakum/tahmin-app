@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
@@ -10,6 +10,7 @@ import { signOut, toAuthMessage } from '@/features/auth/api';
 import { FormError } from '@/features/auth/components/auth-screen';
 import { NotificationSettingsCard } from '@/features/notifications/components/notification-settings-card';
 import { useDeleteAccount } from '@/features/profile/queries';
+import { confirmDestructive } from '@/lib/dialogs';
 
 /** Ayarlar (profildeki dişli simgesinden): bildirimler ve hesap. */
 export default function SettingsScreen() {
@@ -26,21 +27,16 @@ export default function SettingsScreen() {
   };
 
   const confirmDelete = () => {
-    Alert.alert(
-      'Hesabını sil',
-      'E-posta adresin ve giriş bilgilerin kalıcı olarak silinir, odalardan çıkarılırsın. Geçmiş tahminlerin isimsiz olarak kalır. Bu işlem geri alınamaz.',
-      [
-        { text: 'Vazgeç', style: 'cancel' },
-        {
-          text: 'Hesabımı sil',
-          style: 'destructive',
-          onPress: () =>
-            deleteAccount.mutate(undefined, {
-              onError: () => setActionError('Hesap silinemedi. İnternet bağlantını kontrol edip tekrar dene.'),
-            }),
-        },
-      ],
-    );
+    confirmDestructive({
+      title: 'Hesabını sil',
+      message:
+        'E-posta adresin ve giriş bilgilerin kalıcı olarak silinir, odalardan çıkarılırsın. Geçmiş tahminlerin isimsiz olarak kalır. Bu işlem geri alınamaz.',
+      confirmLabel: 'Hesabımı sil',
+      onConfirm: () =>
+        deleteAccount.mutate(undefined, {
+          onError: () => setActionError('Hesap silinemedi. İnternet bağlantını kontrol edip tekrar dene.'),
+        }),
+    });
   };
 
   return (

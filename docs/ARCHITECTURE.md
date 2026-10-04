@@ -126,12 +126,20 @@ Uygulamanın bilmesi gerekenler:
 - `get_my_stats()`, `get_my_prediction_history()`: kullanıcının kendi verisi (RLS ile).
 - `delete_my_account()`: giriş bilgileri `auth.users`'tan silinir; profil "Silinmiş Kullanıcı" olarak anonimleşir; tahminler kalır ama sıralamada görünmez; kurulan odalar en eski üyeye devredilir, tek kişilikse silinir.
 
+## Android derlemesi (FAZ 18)
+
+- `eas.json`: `preview` profili Android'de APK üretir (`distribution: internal`), `production` profili mağaza paketi (AAB). Sürüm numarası EAS'te tutulur (`appVersionSource: remote`).
+- Uygulama adı "Tahminet", paket kimliği `com.devmelop.tahminet` (iOS'ta da aynı). Kimlik Google Play'e çıkınca değiştirilemez.
+- Derlemede `.env` yoktur (git'e girmez): `EXPO_PUBLIC_SUPABASE_URL` ve `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` EAS ortam değişkeni olarak `preview` ve `production` ortamlarında tanımlıdır (`eas env:list preview`). İkisi de zaten herkese açık değerlerdir.
+- İmza anahtarı (keystore) EAS'te bulutta oluşturuldu ve orada saklanır; kaybedilirse Google Play'de güncelleme yayınlanamaz.
+- Android'de bildirim için Firebase projesi (`google-services.json`) ve FCM V1 anahtarı gerekir; kurulana kadar Android sürümünde bildirim açılmaz (uygulama çalışmaya devam eder).
+
 ## Davet bağlantısı ve web sitesi (FAZ 14)
 
 - **Bağlantı:** `https://tahminet.expo.app/davet?kod=ABC234` (`src/lib/invite.ts`). Kod sorgu parametresindedir; durağan (static) web çıktısında `/davet/[kod]` gibi dinamik yollar çalışmadığı için bu biçim seçildi. Adres değişirse eski davetler çalışmaz.
 - **WhatsApp:** oda ekranındaki düğme `https://wa.me/?text=…` açar (WhatsApp'ın resmi biçimi; kişi seçilince mesaj hazır gelir). Mesajda bağlantı ve elle girmek için kod vardır. "Paylaş" telefonun paylaşma penceresini açar.
 - **`src/app/davet.tsx`:** web'de bilgi sayfası (kod, kopyala, katılma adımları); uygulamada katılma ekranı (onaydan sonra `join_room`). Giriş yapılmamışsa kod cihazda saklanır (`pending-invite.ts`, en fazla 1 gün), girişten sonra ekran kendiliğinden açılır. Bağlantıdaki kod `^[A-Z0-9]{6}$` dışında ise reddedilir.
-- **Web sitesi (EAS Hosting, ücretsiz plan: ayda 100 bin istek):** yayındaki web sürümünde (`Platform.OS === 'web' && !__DEV__`) yalnızca `davet` açılır, diğer tüm sayfalar ona yönlenir; uygulama telefon içindir. Geliştirirken web'de her şey açıktır (`/dev-gallery`). WhatsApp önizlemesi `src/app/+html.tsx`'teki `og:` etiketlerini okur. Site haritası kapalı (`expo-router` eklentisinde `sitemap: false`).
+- **Web sürümü (EAS Hosting, ücretsiz plan: ayda 100 bin istek):** 2026-10-04'ten beri tam uygulama web'de de açık (iPhone beta'sı Safari'den; Apple hesabı olmadan iPhone'a uygulama dağıtılamıyor). Girişsiz ziyaretçi davet bağlantısında bilgi sayfasını ve "Tarayıcıda Kayıt Ol / Giriş Yap"ı görür; kod saklanır, girişten sonra davet açılır. Web'de bildirim ve görsel paylaşma yok (metin paylaşma var); onay pencereleri `src/lib/dialogs.ts` ile tarayıcının penceresine düşer (React Native'in Alert'i web'de çalışmaz). Ana Ekrana Ekle için `public/manifest.json` ve `public/apple-touch-icon.png`. Değişken adresler (örn. `/room/…`) yenilenince sunucu 404 kodu döner ama uygulamayı gönderir; uygulama doğru ekranı açar. WhatsApp önizlemesi `src/app/+html.tsx`'teki `og:` etiketlerini okur. Site haritası kapalı (`expo-router` eklentisinde `sitemap: false`).
 - **Yeniden yayınlama** (davet sayfası değişince): `npx expo export --platform web`, ardından `npx eas-cli@latest deploy --prod`.
 - **Sonra (FAZ 19):** bağlantının uygulamayı doğrudan açması için iOS Universal Links (`public/.well-known/apple-app-site-association`, Apple Team ID + `ios.associatedDomains: ["applinks:tahminet.expo.app"]`) ve Android App Links (`assetlinks.json` + `intentFilters`). O zamana kadar bağlantı tarayıcıda sayfayı açar; uygulama içi `tahminapp://davet?kod=…` bağlantısı da aynı ekranı açar.
 

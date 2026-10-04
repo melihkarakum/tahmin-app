@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Linking, RefreshControl, Share, View } from 'react-native';
+import { Linking, RefreshControl, Share, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -22,6 +22,7 @@ import {
   useRoomLeaderboard,
 } from '@/features/rooms/queries';
 import { haptics } from '@/lib/haptics';
+import { confirmDestructive, showMessage } from '@/lib/dialogs';
 import { inviteMessage, whatsappShareUrl } from '@/lib/invite';
 import type { LeaderboardRow, LeaderboardScope } from '@/types/domain';
 
@@ -98,45 +99,34 @@ export default function RoomScreen() {
     Share.share({ message });
   };
 
-  const showError = (error: unknown) => Alert.alert('İşlem tamamlanamadı', toRoomMessage(error));
+  const showError = (error: unknown) => showMessage('İşlem tamamlanamadı', toRoomMessage(error));
 
   const confirmRemove = (row: LeaderboardRow) => {
-    Alert.alert(row.displayName, 'Bu üyeyi odadan çıkarmak istiyor musun?', [
-      { text: 'Vazgeç', style: 'cancel' },
-      {
-        text: 'Odadan çıkar',
-        style: 'destructive',
-        onPress: () => removeMember.mutate(row.userId, { onError: showError }),
-      },
-    ]);
+    confirmDestructive({
+      title: row.displayName,
+      message: 'Bu üyeyi odadan çıkarmak istiyor musun?',
+      confirmLabel: 'Odadan çıkar',
+      onConfirm: () => removeMember.mutate(row.userId, { onError: showError }),
+    });
   };
 
   const confirmLeave = () => {
     if (!myId) return;
-    Alert.alert('Odadan ayrıl', `${room.name} odasından ayrılmak istiyor musun?`, [
-      { text: 'Vazgeç', style: 'cancel' },
-      {
-        text: 'Ayrıl',
-        style: 'destructive',
-        onPress: () =>
-          removeMember.mutate(myId, { onSuccess: () => router.back(), onError: showError }),
-      },
-    ]);
+    confirmDestructive({
+      title: 'Odadan ayrıl',
+      message: `${room.name} odasından ayrılmak istiyor musun?`,
+      confirmLabel: 'Ayrıl',
+      onConfirm: () => removeMember.mutate(myId, { onSuccess: () => router.back(), onError: showError }),
+    });
   };
 
   const confirmDelete = () => {
-    Alert.alert(
-      'Odayı sil',
-      `${room.name} odası tüm üyeler için silinecek. Tahminler ve puanlar silinmez. Emin misin?`,
-      [
-        { text: 'Vazgeç', style: 'cancel' },
-        {
-          text: 'Odayı sil',
-          style: 'destructive',
-          onPress: () => deleteRoom.mutate(undefined, { onSuccess: () => router.back(), onError: showError }),
-        },
-      ],
-    );
+    confirmDestructive({
+      title: 'Odayı sil',
+      message: `${room.name} odası tüm üyeler için silinecek. Tahminler ve puanlar silinmez. Emin misin?`,
+      confirmLabel: 'Odayı sil',
+      onConfirm: () => deleteRoom.mutate(undefined, { onSuccess: () => router.back(), onError: showError }),
+    });
   };
 
   return (
