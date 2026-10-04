@@ -1,15 +1,17 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Linking, RefreshControl, Share, View } from 'react-native';
+import { Alert, Linking, RefreshControl, Share, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
-import { SegmentedControl } from '@/components/ui/segmented-control';
+import { RowsSkeleton, Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { useAuth } from '@/features/auth/auth-provider';
-import { RankRow } from '@/features/leaderboard/components/rank-row';
 import { useCurrentRound } from '@/features/matches/queries';
+import { RoomInviteCard } from '@/features/rooms/components/room-invite-card';
+import { RoomStandings } from '@/features/rooms/components/room-standings';
 import {
   toRoomMessage,
   useDeleteRoom,
@@ -17,14 +19,9 @@ import {
   useRoom,
   useRoomLeaderboard,
 } from '@/features/rooms/queries';
+import { haptics } from '@/lib/haptics';
 import { inviteMessage, whatsappShareUrl } from '@/lib/invite';
-import { trUpper } from '@/lib/text';
 import type { LeaderboardRow, LeaderboardScope } from '@/types/domain';
-
-const scopeOptions: { value: LeaderboardScope; label: string }[] = [
-  { value: 'week', label: 'Bu Hafta' },
-  { value: 'season', label: 'Sezon' },
-];
 
 export default function RoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,6 +30,8 @@ export default function RoomScreen() {
   const myId = session?.user.id;
   const [scope, setScope] = useState<LeaderboardScope>('week');
   const [refreshing, setRefreshing] = useState(false);
+  // null: kullanıcı henüz dokunmadı. Odada tek başınaysan davet alanı açık başlar.
+  const [inviteExpanded, setInviteExpanded] = useState<boolean | null>(null);
 
   const roomQuery = useRoom(id);
   const room = roomQuery.data;
@@ -43,6 +42,14 @@ export default function RoomScreen() {
   const deleteRoom = useDeleteRoom(id);
 
   const isOwner = room !== null && room !== undefined && room.owner_id === myId;
+  const isAlone = leaderboardQuery.isSuccess && rows.length === 1;
+  const inviteOpen = inviteExpanded ?? isAlone;
+  const standingsContext =
+    current === null || current === undefined
+      ? undefined
+      : scope === 'week'
+        ? `${current.round}. hafta`
+        : `${current.seasonName} sezonu`;
 
   const refresh = async () => {
     setRefreshing(true);
@@ -53,9 +60,13 @@ export default function RoomScreen() {
   if (roomQuery.isLoading) {
     return (
       <Screen topInset={false}>
-        <View className="items-center py-16">
-          <ActivityIndicator color={colors.primary} />
-        </View>
+        <SkeletonGroup className="gap-3">
+          <Skeleton width="60%" height={30} />
+          <Skeleton width="30%" height={14} />
+          <Skeleton height={64} radius={24} style={{ marginTop: 12 }} />
+          <Skeleton height={44} radius={16} style={{ marginTop: 20 }} />
+          <RowsSkeleton count={4} />
+        </SkeletonGroup>
       </Screen>
     );
   }
@@ -137,48 +148,42 @@ export default function RoomScreen() {
         {isOwner ? ' · Kurucusun' : ''}
       </Text>
 
-      <View className="mt-5 rounded-3xl border border-border bg-surface p-4">
-        <Text className="text-[10px] font-bold tracking-widest text-muted">{trUpper('Oda kodu')}</Text>
-        <Text className="mt-1 text-3xl font-extrabold tracking-[4px] text-ink">{room.code}</Text>
-        <View className="mt-3 flex-row gap-2">
-          <Button label="WhatsApp" onPress={inviteWhatsApp} style={{ flex: 1 }} />
-          <Button label="Paylaş" variant="secondary" onPress={inviteOther} style={{ flex: 1 }} />
+      <View className="mt-5">
+        <RoomInviteCard
+          code={room.code}
+          expanded={inviteOpen}
+          onToggle={() => {
+            haptics.selection();
+            setInviteExpanded(!inviteOpen);
+          }}
+          onWhatsApp={inviteWhatsApp}
+          onShare={inviteOther}
+        />
+      </View>
+
+      <View className="mt-8">
+        <RoomStandings
+          rows={rows}
+          scope={scope}
+          onScopeChange={setScope}
+          context={standingsContext}
+          isLoading={leaderboardQuery.isLoading}
+          isSwitching={leaderboardQuery.isPlaceholderData}
+          hasError={leaderboardQuery.isError}
+          onRetry={() => leaderboardQuery.refetch()}
+          onMemberPress={isOwner ? confirmRemove : undefined}
+        />
+      </View>
+
+      <View className="mt-3 flex-row items-start gap-2 px-1">
+        <View className="pt-0.5">
+          <Icon name="info" size={13} color={colors.muted} />
         </View>
-        <Text className="mt-2 text-xs text-muted">
-          {"Arkadaşların davet bağlantısına dokunarak ya da Odalar → Koda Katıl'a bu kodu girerek katılır."}
+        <Text className="flex-1 text-xs text-muted">
+          Bu odada, oda kurulduktan sonra başlayan maçların puanları sayılır.
+          {isOwner && rows.length > 1 ? ' Bir üyeyi çıkarmak için adına dokun.' : ''}
         </Text>
       </View>
-
-      <View className="mt-6">
-        <SegmentedControl options={scopeOptions} value={scope} onChange={setScope} />
-      </View>
-
-      <View className="mt-4 overflow-hidden rounded-3xl border border-border bg-surface">
-        {leaderboardQuery.isLoading ? (
-          <View className="items-center py-8">
-            <ActivityIndicator color={colors.primary} />
-          </View>
-        ) : leaderboardQuery.error ? (
-          <Text className="p-4 text-center text-sm text-muted">Sıralama yüklenemedi.</Text>
-        ) : (
-          rows.map((row, index) => (
-            <RankRow
-              key={row.userId}
-              row={row}
-              isLast={index === rows.length - 1}
-              onPress={isOwner && !row.isMe ? () => confirmRemove(row) : undefined}
-            />
-          ))
-        )}
-      </View>
-      <Text className="mt-2 text-center text-xs text-muted">
-        Bu odada, oda kurulduktan sonra başlayan maçların puanları sayılır.
-      </Text>
-      {isOwner && rows.length > 1 ? (
-        <Text className="mt-1 text-center text-xs text-muted">
-          Bir üyeyi çıkarmak için satırına dokun.
-        </Text>
-      ) : null}
 
       <View className="mt-8">
         {isOwner ? (

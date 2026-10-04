@@ -42,6 +42,10 @@ export type LeaderboardRow = {
   rank: number;
   points: number;
   exactCount: number;
+  /** Sonucu (galibiyet/beraberlik/mağlubiyet) doğru bilinen maçlar; tam skorlar dahil. */
+  outcomeCount?: number;
+  /** Puanlanmış tahmin sayısı (maçı bitmiş tahminler). */
+  scoredCount?: number;
   isMe?: boolean;
 };
 

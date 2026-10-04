@@ -202,12 +202,15 @@ Yalnızca ekran ve `_layout` dosyaları `src/app/` içinde durur; geri kalan kod
 ## Tasarım
 
 - **Koyu "stadyum gecesi" teması** (FotMob, Maçkolik, Apple Sports çizgisi): neredeyse siyah zemin, koyu kartlar, canlı yeşil vurgu, tam skor için altın, canlı maç için kırmızı.
-- **Takım rozetleri:** logo yerine kulüp renklerinde yuvarlak rozet ve kısa ad (`src/constants/team-colors.ts`). Logo kullanım hakkı netleşene kadar böyle kalır.
+- **Takım logoları:** maç kartlarında takım logosu; logo yoksa ya da yüklenemezse kulüp renklerinde yuvarlak rozet ve kısa ad (`src/constants/team-colors.ts`). Ayrıntı: "Takım logoları" bölümü.
 - **Maç kartı skorbord düzeninde:** ev sahibi solda, deplasman sağda, ortada saat ya da skor; tahmin düğmeleri her takımın altında.
 - **Ana sayfa hafta hafta:** üstte yatay hafta seçici (içinde bulunulan hafta "BU HAFTA" etiketli ve açılışta seçili), altında yalnızca seçilen haftanın özeti ve maçları. Arkadaş ve Türkiye sıralaması ana sayfada değil, kendi sekmelerinde.
 - **Tasarım vitrini:** `/dev-gallery` adresi kartların tüm durumlarını örnek veriyle gösterir; giriş gerektirmez ve yalnızca geliştirme modunda açılır.
 - **Yazı tipi: Plus Jakarta Sans** (400, 500, 600, 700, 800). Rakamları eşit genişlikte olduğu için skorlar hizalı durur. Yazı tipleri uygulama açılırken yüklenir; yüklenene kadar açılış ekranı kalır. Kalınlık `font-bold` gibi sınıflarla seçilir; bu sınıflar doğrudan ilgili yazı tipi dosyasına bağlıdır (`tailwind.config.js`). Tüm metinler `src/components/ui/text.tsx` üzerinden geçer.
 - En dar desteklenen ekran 375 px (iPhone SE); düzenler 360 px'te de taşmadan çalışır.
+- **Yükleniyor durumu:** ortada dönen simge yerine içeriğin biçiminde yanıp sönen iskelet (`src/components/ui/skeleton.tsx`: `MatchCardSkeleton`, `RowsSkeleton`, `Skeleton`). "Hareketi azalt" açıksa yanıp sönmez.
+- **Dokunuş titreşimi:** `src/lib/haptics.ts` (`selection`, `success`, `warning`); web'de kapalı, hiçbir işlemi engellemez. Seçim değişiminde `selection`, kaydetme/katılma başarısında `success`, reddedilen işlemde `warning`.
+- **Oda ekranı:** davet alanı katlanır (odada tek başınaysan açık başlar); sıralamada puan alan varsa ilk üç kürsüde, kalanlar listede.
 
 ## Stil kuralları
 

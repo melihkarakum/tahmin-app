@@ -40,6 +40,8 @@ export function useNationalLeaderboard(
         rank: row.rank,
         points: row.points,
         exactCount: row.exact_count,
+        outcomeCount: row.outcome_count,
+        scoredCount: row.scored_count,
         isMe: row.is_me,
       }));
 

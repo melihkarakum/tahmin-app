@@ -1,11 +1,12 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, View } from 'react-native';
+import { Alert, RefreshControl, View } from 'react-native';
 
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { RowsSkeleton, Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors, tabularNums } from '@/constants/theme';
 import { signOut, toAuthMessage } from '@/features/auth/api';
@@ -84,9 +85,14 @@ export default function ProfileScreen() {
       </View>
 
       {statsQuery.isLoading ? (
-        <View className="items-center py-10">
-          <ActivityIndicator color={colors.primary} />
-        </View>
+        <SkeletonGroup className="mt-6 gap-3">
+          {[0, 1, 2].map((line) => (
+            <View key={line} className="flex-row gap-3">
+              <Skeleton flex height={86} radius={24} />
+              <Skeleton flex height={86} radius={24} />
+            </View>
+          ))}
+        </SkeletonGroup>
       ) : stats ? (
         <View className="mt-6 gap-3">
           <View className="flex-row gap-3">
@@ -114,9 +120,9 @@ export default function ProfileScreen() {
       />
       <View className="overflow-hidden rounded-3xl border border-border bg-surface">
         {historyQuery.isLoading ? (
-          <View className="items-center py-8">
-            <ActivityIndicator color={colors.primary} />
-          </View>
+          <SkeletonGroup>
+            <RowsSkeleton count={3} avatar={false} bare />
+          </SkeletonGroup>
         ) : history.length === 0 ? (
           <Text className="p-5 text-center text-sm text-muted">
             Henüz tahmin yapmadın. Ana sayfadan haftanın maçlarına tahmin yapabilirsin.

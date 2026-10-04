@@ -4,6 +4,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PressableOpacity } from '@/components/ui/pressable-opacity';
 import { Text } from '@/components/ui/text';
 import { tabularNums } from '@/constants/theme';
+import { haptics } from '@/lib/haptics';
 import { trUpper } from '@/lib/text';
 
 const COLUMNS = 6;
@@ -51,6 +52,7 @@ export function WeekPickerSheet({
             <PressableOpacity
               key={round}
               onPress={() => {
+                if (!isSelected) haptics.selection();
                 onSelect(round);
                 onClose();
               }}

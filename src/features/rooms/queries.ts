@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/features/auth/auth-provider';
 import { supabase } from '@/lib/supabase';
@@ -76,9 +76,13 @@ export function useRoomLeaderboard(roomId: string, scope: LeaderboardScope, roun
         rank: row.rank,
         points: row.points,
         exactCount: row.exact_count,
+        outcomeCount: row.outcome_count,
+        scoredCount: row.scored_count,
         isMe: row.user_id === userId,
       }));
     },
+    // Hafta/Sezon arasında geçerken liste boşalıp yanıp sönmesin; yenisi gelene kadar eskisi kalır.
+    placeholderData: keepPreviousData,
   });
 }
 

@@ -23,6 +23,7 @@ A social football score-prediction app (Turkish Süper Lig first, friend rooms, 
 - TextInput: no `lineHeight` (no `text-base`-style classes that set it) — it shifts and clips text on iOS; size comes from `fontSize` only.
 - Layouts must fit a 375 px wide phone (smallest supported iPhone); check `/dev-gallery` at 375 and 360 px.
 - Check visual changes on `/dev-gallery` (dev-only, no login needed) before asking the owner to look on the phone.
+- Loading states use the skeletons in `src/components/ui/skeleton.tsx`, not a centered spinner. Haptic feedback goes through `haptics` in `src/lib/haptics.ts` (never call `expo-haptics` directly).
 - NativeWind: never toggle `shadow-*` or `opacity-*` through a conditional `className` (use inline `style`), and never combine `contentContainerClassName` with `contentContainerStyle` on one `ScrollView`.
 - Tab screens stay mounted across logout/login: clear cached server data on sign-out.
 

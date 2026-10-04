@@ -10,15 +10,24 @@ import type { LeaderboardRow } from '@/types/domain';
 type RankRowProps = {
   row: LeaderboardRow;
   isLast?: boolean;
+  /** false: henüz kimse puan almadıysa sıra numarası yerine çizgi gösterilir. */
+  showRank?: boolean;
   /** Verilirse satıra dokunulabilir (örneğin oda sahibinin üye çıkarması). */
   onPress?: () => void;
 };
 
-export function RankRow({ row, isLast = false, onPress }: RankRowProps) {
+/** "2 tam skor · 5 doğru sonuç" (doğru sonuç sayısı bilinmiyorsa yalnızca tam skor). */
+export function rowStatsLabel(row: LeaderboardRow): string {
+  if (row.scoredCount === 0) return 'Puanlanan tahmini yok';
+  const exact = `${formatNumber(row.exactCount)} tam skor`;
+  return row.outcomeCount === undefined ? exact : `${exact} · ${formatNumber(row.outcomeCount)} doğru sonuç`;
+}
+
+export function RankRow({ row, isLast = false, showRank = true, onPress }: RankRowProps) {
   const borderClass = isLast ? '' : 'border-b border-border';
   const backgroundClass = row.isMe ? 'bg-primary-soft' : '';
   // Madalya yalnızca puan alanlara: herkes 0'dayken herkes "1." olur, madalya anlamsız kalır.
-  const medal = row.points > 0 && row.rank <= 3 ? medalColors[row.rank as 1 | 2 | 3] : null;
+  const medal = showRank && row.points > 0 && row.rank <= 3 ? medalColors[row.rank as 1 | 2 | 3] : null;
 
   const content = (
     <View className={`flex-row items-center px-4 py-3 ${borderClass} ${backgroundClass}`}>
@@ -31,7 +40,7 @@ export function RankRow({ row, isLast = false, onPress }: RankRowProps) {
           </View>
         ) : (
           <Text className="w-7 text-center text-sm font-bold text-muted" style={tabularNums}>
-            {row.rank}
+            {showRank ? row.rank : '–'}
           </Text>
         )}
       </View>
@@ -42,7 +51,9 @@ export function RankRow({ row, isLast = false, onPress }: RankRowProps) {
         <Text className="text-base font-bold text-ink" numberOfLines={1}>
           {row.isMe ? `${row.displayName} (sen)` : row.displayName}
         </Text>
-        <Text className="text-xs text-muted">{row.exactCount} tam skor</Text>
+        <Text className="text-xs text-muted" numberOfLines={1}>
+          {rowStatsLabel(row)}
+        </Text>
       </View>
 
       <Text className="text-lg font-black text-ink" style={tabularNums}>

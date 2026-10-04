@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ActivityIndicator, RefreshControl, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { SegmentedControl } from '@/components/ui/segmented-control';
+import { RowsSkeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors, tabularNums } from '@/constants/theme';
 import { RankRow } from '@/features/leaderboard/components/rank-row';
@@ -48,9 +49,9 @@ export default function LeaderboardScreen() {
       </View>
 
       {leaderboardQuery.isLoading ? (
-        <View className="items-center py-16">
-          <ActivityIndicator color={colors.primary} />
-        </View>
+        <SkeletonGroup className="mt-4">
+          <RowsSkeleton count={8} />
+        </SkeletonGroup>
       ) : leaderboardQuery.error ? (
         <View className="mt-4 items-center gap-3 rounded-3xl border border-border bg-surface p-6">
           <Text className="text-center text-sm text-muted">Sıralama yüklenemedi.</Text>

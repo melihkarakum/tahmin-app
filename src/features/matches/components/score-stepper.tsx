@@ -4,6 +4,7 @@ import { Icon } from '@/components/ui/icon';
 import { PressableOpacity } from '@/components/ui/pressable-opacity';
 import { Text } from '@/components/ui/text';
 import { colors, tabularNums } from '@/constants/theme';
+import { haptics } from '@/lib/haptics';
 
 const MAX_GOALS = 20;
 
@@ -18,7 +19,10 @@ export function ScoreStepper({ value, onChange, teamName }: ScoreStepperProps) {
   return (
     <View className="flex-row items-center">
       <PressableOpacity
-        onPress={() => onChange(Math.max(0, value - 1))}
+        onPress={() => {
+          haptics.selection();
+          onChange(Math.max(0, value - 1));
+        }}
         disabled={value === 0}
         hitSlop={6}
         accessibilityLabel={`${teamName} golünü azalt`}>
@@ -32,7 +36,10 @@ export function ScoreStepper({ value, onChange, teamName }: ScoreStepperProps) {
       </Text>
 
       <PressableOpacity
-        onPress={() => onChange(Math.min(MAX_GOALS, value + 1))}
+        onPress={() => {
+          haptics.selection();
+          onChange(Math.min(MAX_GOALS, value + 1));
+        }}
         disabled={value === MAX_GOALS}
         hitSlop={6}
         accessibilityLabel={`${teamName} golünü artır`}>

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { ActivityIndicator, RefreshControl, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
+import { RowsSkeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { HistoryRow } from '@/features/profile/components/history-row';
@@ -34,9 +35,9 @@ export default function HistoryScreen() {
       </Text>
 
       {historyQuery.isLoading ? (
-        <View className="items-center py-16">
-          <ActivityIndicator color={colors.primary} />
-        </View>
+        <SkeletonGroup className="mt-5">
+          <RowsSkeleton count={6} avatar={false} />
+        </SkeletonGroup>
       ) : historyQuery.error ? (
         <View className="mt-5 items-center gap-3 rounded-3xl border border-border bg-surface p-6">
           <Text className="text-center text-sm text-muted">Tahminler yüklenemedi.</Text>

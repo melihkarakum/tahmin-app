@@ -12,6 +12,7 @@ import { TeamCrest } from '@/features/matches/components/team-crest';
 import { getMatchPhase, type MatchPhase } from '@/features/matches/phase';
 import { toPredictionMessage, useSavePrediction } from '@/features/matches/queries';
 import { maybeOfferPush } from '@/features/notifications/push';
+import { haptics } from '@/lib/haptics';
 import { formatCountdown, formatDay, formatTime, resultLabels } from '@/lib/format';
 import { trUpper } from '@/lib/text';
 import type { Match, Prediction, Team } from '@/types/domain';
@@ -39,10 +40,14 @@ export function MatchCard({ match, prediction, now }: MatchCardProps) {
       { matchId: match.id, homeGoals, awayGoals },
       {
         onSuccess: () => {
+          haptics.success();
           setEditing(false);
           void maybeOfferPush();
         },
-        onError: (saveError) => setError(toPredictionMessage(saveError)),
+        onError: (saveError) => {
+          haptics.warning();
+          setError(toPredictionMessage(saveError));
+        },
       },
     );
   };

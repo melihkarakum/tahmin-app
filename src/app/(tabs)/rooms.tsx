@@ -1,15 +1,17 @@
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, Platform, RefreshControl, TextInput, View } from 'react-native';
+import { Platform, RefreshControl, TextInput, View } from 'react-native';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { PressableOpacity } from '@/components/ui/pressable-opacity';
 import { Screen } from '@/components/ui/screen';
+import { Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { TextField } from '@/components/ui/text-field';
 import { colors, tabularNums } from '@/constants/theme';
+import { haptics } from '@/lib/haptics';
 import {
   joinStatusMessages,
   type MyRoom,
@@ -66,9 +68,11 @@ export default function RoomsScreen() {
       </View>
 
       {roomsQuery.isLoading ? (
-        <View className="items-center py-16">
-          <ActivityIndicator color={colors.primary} />
-        </View>
+        <SkeletonGroup className="mt-6 gap-3">
+          <Skeleton height={84} radius={24} />
+          <Skeleton height={84} radius={24} />
+          <Skeleton height={84} radius={24} />
+        </SkeletonGroup>
       ) : roomsQuery.error ? (
         <View className="mt-6 items-center gap-3 rounded-3xl border border-border bg-surface p-6">
           <Text className="text-center text-sm text-muted">Odalar yüklenemedi.</Text>
@@ -177,6 +181,7 @@ function CreateRoomSheet({
     setError(null);
     createRoom.mutate(name, {
       onSuccess: (room) => {
+        haptics.success();
         setName('');
         onCreated(room.id);
       },
@@ -244,11 +249,15 @@ function JoinRoomSheet({
     joinRoom.mutate(code, {
       onSuccess: ({ status, roomId }) => {
         if ((status === 'joined' || status === 'already_member') && roomId) {
+          haptics.success();
           setCode('');
           onJoined(roomId);
           return;
         }
-        if (status !== 'joined' && status !== 'already_member') setError(joinStatusMessages[status]);
+        if (status !== 'joined' && status !== 'already_member') {
+          haptics.warning();
+          setError(joinStatusMessages[status]);
+        }
       },
       onError: (joinError) => setError(toRoomMessage(joinError)),
     });

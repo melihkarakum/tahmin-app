@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ActivityIndicator, RefreshControl, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
+import { MatchCardSkeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { MatchCard } from '@/features/matches/components/match-card';
@@ -18,6 +19,7 @@ import {
   useSeasonRounds,
 } from '@/features/matches/queries';
 import { useNow } from '@/hooks/use-now';
+import { haptics } from '@/lib/haptics';
 import { formatDateRange } from '@/lib/format';
 import type { Match, Prediction } from '@/types/domain';
 
@@ -59,7 +61,9 @@ export default function HomeScreen() {
 
   const goToIndex = (index: number) => {
     const round = rounds[index];
-    if (round !== undefined) setPickedRound(round);
+    if (round === undefined) return;
+    haptics.selection();
+    setPickedRound(round);
   };
 
   const refresh = async () => {
@@ -109,9 +113,11 @@ export default function HomeScreen() {
       ) : null}
 
       {isLoading ? (
-        <View className="items-center py-16">
-          <ActivityIndicator color={colors.primary} />
-        </View>
+        <SkeletonGroup className="mt-4 gap-3">
+          <MatchCardSkeleton />
+          <MatchCardSkeleton />
+          <MatchCardSkeleton />
+        </SkeletonGroup>
       ) : loadError ? (
         <View className="mt-4 items-center gap-3 rounded-3xl border border-border bg-surface p-6">
           <Text className="text-center text-sm text-muted">Maçlar yüklenemedi.</Text>

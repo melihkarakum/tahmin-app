@@ -9,6 +9,7 @@ import { Text } from '@/components/ui/text';
 import { useAuth } from '@/features/auth/auth-provider';
 import { savePendingInvite } from '@/features/rooms/pending-invite';
 import { joinStatusMessages, toRoomMessage, useJoinRoom } from '@/features/rooms/queries';
+import { haptics } from '@/lib/haptics';
 import { normalizeInviteCode } from '@/lib/invite';
 import { trUpper } from '@/lib/text';
 
@@ -147,9 +148,11 @@ function InviteJoin({ code }: { code: string | null }) {
     joinRoom.mutate(code, {
       onSuccess: ({ status, roomId }) => {
         if (status === 'joined' || status === 'already_member') {
+          haptics.success();
           if (roomId) router.replace({ pathname: '/room/[id]', params: { id: roomId } });
           return;
         }
+        haptics.warning();
         setMessage(joinStatusMessages[status]);
       },
       onError: (error) => setMessage(toRoomMessage(error)),

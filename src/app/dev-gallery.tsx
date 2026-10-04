@@ -6,6 +6,7 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { SectionTitle } from '@/components/ui/section-title';
+import { MatchCardSkeleton, RowsSkeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { TextField } from '@/components/ui/text-field';
 import { RankRow } from '@/features/leaderboard/components/rank-row';
@@ -18,8 +19,17 @@ import {
   PermissionNotice,
 } from '@/features/notifications/components/notification-settings-card';
 import { HistoryRow } from '@/features/profile/components/history-row';
+import { RoomInviteCard } from '@/features/rooms/components/room-invite-card';
+import { RoomStandings } from '@/features/rooms/components/room-standings';
 import { teamLogoUrl } from '@/lib/team-logo';
-import type { HistoryItem, LeaderboardRow, Match, Prediction, Team } from '@/types/domain';
+import type {
+  HistoryItem,
+  LeaderboardRow,
+  LeaderboardScope,
+  Match,
+  Prediction,
+  Team,
+} from '@/types/domain';
 
 // YALNIZCA GELİŞTİRME: tasarımı giriş yapmadan görmek için kartların tüm durumları, örnek veriyle.
 // Yayın sürümünde açılmaz (ana sayfaya yönlendirir). Adres: /dev-gallery
@@ -156,6 +166,25 @@ const SAMPLE_HISTORY: HistoryItem[] = [
   },
 ];
 
+// Oda sıralaması örnekleri: kalabalık oda (kürsü + liste), iki kişilik oda, henüz puan yok.
+const ROOM_ROWS: LeaderboardRow[] = [
+  { rank: 1, userId: 'r1', displayName: 'Burak', points: 23, exactCount: 3, outcomeCount: 6, scoredCount: 9 },
+  { rank: 2, userId: 'r2', displayName: 'Melih', points: 19, exactCount: 2, outcomeCount: 5, scoredCount: 9, isMe: true },
+  { rank: 3, userId: 'r3', displayName: 'Fatih Karagümrüklü Ahmet', points: 15, exactCount: 1, outcomeCount: 5, scoredCount: 9 },
+  { rank: 4, userId: 'r4', displayName: 'Emre', points: 12, exactCount: 1, outcomeCount: 3, scoredCount: 8 },
+  { rank: 5, userId: 'r5', displayName: 'Can', points: 4, exactCount: 0, outcomeCount: 1, scoredCount: 6 },
+];
+const ROOM_ROWS_PAIR = ROOM_ROWS.slice(0, 2);
+const ROOM_ROWS_EMPTY: LeaderboardRow[] = ROOM_ROWS.slice(0, 3).map((row) => ({
+  ...row,
+  rank: 1,
+  points: 0,
+  exactCount: 0,
+  outcomeCount: 0,
+  scoredCount: 0,
+}));
+const ROOM_SAMPLES = { full: ROOM_ROWS, pair: ROOM_ROWS_PAIR, empty: ROOM_ROWS_EMPTY };
+
 const SAMPLE_ROWS: LeaderboardRow[] = [
   { rank: 1, userId: 'a', displayName: 'Burak', points: 11, exactCount: 1 },
   { rank: 2, userId: 'b', displayName: 'Ahmet', points: 9, exactCount: 1 },
@@ -169,6 +198,9 @@ export default function DevGallery() {
   const [round, setRound] = useState(8);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [roomScope, setRoomScope] = useState<LeaderboardScope>('week');
+  const [roomSample, setRoomSample] = useState<keyof typeof ROOM_SAMPLES>('full');
 
   if (!__DEV__) return <Redirect href="/" />;
 
@@ -227,6 +259,44 @@ export default function DevGallery() {
         {SAMPLE_HISTORY.map((item, index) => (
           <HistoryRow key={item.matchId} item={item} isLast={index === SAMPLE_HISTORY.length - 1} />
         ))}
+      </View>
+
+      <SectionTitle title="Yükleniyor görünümü" />
+      <View className="gap-3">
+        <MatchCardSkeleton />
+        <RowsSkeleton count={3} />
+      </View>
+
+      <SectionTitle title="Oda ekranı" />
+      <RoomInviteCard
+        code="HT42K9"
+        expanded={inviteOpen}
+        onToggle={() => setInviteOpen(!inviteOpen)}
+        onWhatsApp={() => {}}
+        onShare={() => {}}
+      />
+      <View className="mt-3 flex-row gap-2">
+        {(Object.keys(ROOM_SAMPLES) as (keyof typeof ROOM_SAMPLES)[]).map((key) => (
+          <Button
+            key={key}
+            label={key}
+            variant={roomSample === key ? 'primary' : 'secondary'}
+            onPress={() => setRoomSample(key)}
+            style={{ flex: 1 }}
+          />
+        ))}
+      </View>
+      <View className="mt-6">
+        <RoomStandings
+          rows={ROOM_SAMPLES[roomSample]}
+          scope={roomScope}
+          onScopeChange={setRoomScope}
+          context={roomScope === 'week' ? '8. hafta' : '2026-27 sezonu'}
+          isLoading={false}
+          hasError={false}
+          onRetry={() => {}}
+          onMemberPress={() => {}}
+        />
       </View>
 
       <SectionTitle title="Bildirimler" />

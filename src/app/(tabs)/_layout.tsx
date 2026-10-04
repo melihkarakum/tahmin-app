@@ -4,6 +4,7 @@ import type { ColorValue } from 'react-native';
 import { Icon, type IconName } from '@/components/ui/icon';
 import { fonts } from '@/constants/fonts';
 import { colors } from '@/constants/theme';
+import { haptics } from '@/lib/haptics';
 
 function tabIcon(name: IconName) {
   return function TabIcon({ color }: { color: ColorValue }) {
@@ -14,6 +15,7 @@ function tabIcon(name: IconName) {
 export default function TabLayout() {
   return (
     <Tabs
+      screenListeners={{ tabPress: () => haptics.selection() }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
